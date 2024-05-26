@@ -33,14 +33,14 @@ typedef struct {
 } state;
 
 // sets the values of memory and registers to 0x0
-static void setup(state cstate) {
-  for (int i; i < MEM_SIZE; i++) { cstate.memory[i] = 0; }
-  for (int i; i < GREG_NUM; i++) { cstate.R[i]      = 0; }
-  cstate.PC       = 0;
-  cstate.PSTATE.Z = 1;
-  cstate.PSTATE.C = 0;
-  cstate.PSTATE.N = 0;
-  cstate.PSTATE.V = 0;
+static void setup(state* cstate) {
+  for (int i; i < MEM_SIZE; i++) { cstate->memory[i] = 0; }
+  for (int i; i < GREG_NUM; i++) { cstate->R[i]      = 0; }
+  cstate->PC       = 0;
+  cstate->PSTATE.Z = 1;
+  cstate->PSTATE.C = 0;
+  cstate->PSTATE.N = 0;
+  cstate->PSTATE.V = 0;
 }
 
 static void loadfile(char fileName[], state* cstate) {
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
     exit(1);
   } 
   state cstate = { .ZR = 0 }; // initializes the machine
-  setup(cstate);
+  setup(&cstate);
 
   loadfile(argv[1], &cstate);
 
