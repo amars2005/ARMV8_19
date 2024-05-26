@@ -46,43 +46,44 @@ static void setup(state cstate) {
   cstate.PSTATE.V = 0;
 }
 
+#define VALUE_STR_LENGTH 16
+#define LINE_STR_LENGTH 50
+
 void valueToStr(char valueAsStr[], uint64_t value) {
-  sprintf(valueAsStr, "%lx", value);
-  while (strlen(valueAsStr) < 16) {
-    strcat("0", valueAsStr);
+  sprintf(valueAsStr, "%lx", value); //creates the value as a string
+  while (strlen(valueAsStr) < VALUE_STR_LENGTH) {
+    strcat("0", valueAsStr); //prefixes the string with the necessary number of 0's
   }
 }
 
 void generateLine(uint64_t value, char line[], char outputString[]) {
-  char valueAsStr[100];
+  char valueAsStr[VALUE_STR_LENGTH]; //creates a line with the register name
   valueToStr(valueAsStr, value);
-  strcat(line, valueAsStr);
+  strcat(line, valueAsStr); //adds the value to the line
   strcat(line, "\n");
-  strcat(outputString, line);
+  strcat(outputString, line); //adds the line to the string
 }
 
 void outputFile(state cstate, char outputString[]) {
   for (int i; i < GREG_NUM; i++) { //generates the line for the general registers
     uint64_t value = cstate.R[i];
-    char line[100];
-    sprintf(line, "X%d", i);
-    strcat(line, " = ");
+    char line[LINE_STR_LENGTH];
+    sprintf(line, "X%d = ", i);
     generateLine(value, line, outputString);
   }
   char pc[] = ("PC = "); //generates the line for the program counter
   uint64_t value = cstate.PC;
   generateLine(value, pc, outputString);  
-  char pstate[] = ("PSTATE : ");
+  char pstate[] = ("PSTATE : "); //generates the line to be outputted for pstate
   if (cstate.PSTATE.Z) { strcat(pstate, "Z"); } else { strcat(pstate, "-"); }
   if (cstate.PSTATE.C) { strcat(pstate, "C"); } else { strcat(pstate, "-"); }
   if (cstate.PSTATE.N) { strcat(pstate, "N"); } else { strcat(pstate, "-"); }
   if (cstate.PSTATE.V) { strcat(pstate, "V"); } else { strcat(pstate, "-"); }
   strcat(outputString, pstate);
-  for (int i = 0; i < MEM_SIZE; i++) {
+  for (int i = 0; i < MEM_SIZE; i++) { //checks non-zero memory and adds it to the output string
     if (cstate.memory[i] != 0) {
-      char line[100];
-      sprintf(line, "X%d", i);
-      strcat(line, " = ");
+      char line[LINE_STR_LENGTH];
+      sprintf(line, "%d = ", i);
       generateLine(cstate.memory[i], line, outputString);
     }
   }
