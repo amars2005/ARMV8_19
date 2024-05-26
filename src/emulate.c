@@ -49,42 +49,50 @@ static void setup(state* cstate) {
 #define VALUE_STR_LENGTH 16
 #define LINE_STR_LENGTH 50
 
-void valueToStr(char valueAsStr[], uint64_t value) {
+char* valueToStr(char* valueAsStr, uint64_t value) {
   sprintf(valueAsStr, "%lx", value); //creates the value as a string
-  while (strlen(valueAsStr) < VALUE_STR_LENGTH) {
-    strcat("0", valueAsStr); //prefixes the string with the necessary number of 0's
+  if (strlen(valueAsStr) < VALUE_STR_LENGTH) {
+    int zeroes = VALUE_STR_LENGTH - strlen(valueAsStr);
+    char *zeroString = malloc(VALUE_STR_LENGTH);
+    for (int i = 0; i < zeroes; i++) { //adds enough zeroes to make it 16 digits
+      strcat(zeroString, "0");
+    }
+    strcat(zeroString, valueAsStr);
+    valueAsStr = zeroString;
   }
+  return valueAsStr;
 }
 
 void generateLine(uint64_t value, char line[], char outputString[]) {
   char valueAsStr[VALUE_STR_LENGTH]; //creates a line with the register name
-  valueToStr(valueAsStr, value);
-  strcat(line, valueAsStr); //adds the value to the line
+  char x[16];
+  sprintf(x, "%s", valueToStr(valueAsStr, value));
+  strcat(line, x); //adds the value to the line
   strcat(line, "\n");
   strcat(outputString, line); //adds the line to the string
 }
 
-void outputFile(state cstate, char outputString[]) {
-  for (int i; i < GREG_NUM; i++) { //generates the line for the general registers
-    uint64_t value = cstate.R[i];
+void outputFile(state* cstate, char outputString[]) {
+  for (int i = 0; i < GREG_NUM; i++) { //generates the line for the general registers
+    uint64_t value = cstate->R[i];
     char line[LINE_STR_LENGTH];
     sprintf(line, "X%d = ", i);
     generateLine(value, line, outputString);
   }
-  char pc[] = ("PC = "); //generates the line for the program counter
-  uint64_t value = cstate.PC;
+  char pc[] = "PC = "; //generates the line for the program counter
+  uint64_t value = cstate->PC;
   generateLine(value, pc, outputString);  
-  char pstate[] = ("PSTATE : "); //generates the line to be outputted for pstate
-  if (cstate.PSTATE.Z) { strcat(pstate, "Z"); } else { strcat(pstate, "-"); }
-  if (cstate.PSTATE.C) { strcat(pstate, "C"); } else { strcat(pstate, "-"); }
-  if (cstate.PSTATE.N) { strcat(pstate, "N"); } else { strcat(pstate, "-"); }
-  if (cstate.PSTATE.V) { strcat(pstate, "V"); } else { strcat(pstate, "-"); }
+  char pstate[] = "PSTATE : "; //generates the line to be outputted for pstate
+  if (cstate->PSTATE.Z==1) { strcat(pstate, "Z"); } else { strcat(pstate, "-"); }
+  if (cstate->PSTATE.C==1) { strcat(pstate, "C"); } else { strcat(pstate, "-"); }
+  if (cstate->PSTATE.N==1) { strcat(pstate, "N"); } else { strcat(pstate, "-"); }
+  if (cstate->PSTATE.V==1) { strcat(pstate, "V\n"); } else { strcat(pstate, "-\n"); }
   strcat(outputString, pstate);
   for (int i = 0; i < MEM_SIZE; i++) { //checks non-zero memory and adds it to the output string
-    if (cstate.memory[i] != 0) {
+    if (cstate->memory[i] != 0) {
       char line[LINE_STR_LENGTH];
       sprintf(line, "%d = ", i);
-      generateLine(cstate.memory[i], line, outputString);
+      generateLine(cstate->memory[i], line, outputString); //adds any to the output
     }
   }
 }
