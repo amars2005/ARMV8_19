@@ -43,6 +43,7 @@ static void setup(state* cstate) {
   cstate->PSTATE.V = 0;
 }
 
+// stores contents of input binary file to memory of machine
 static void loadfile(char fileName[], state* cstate) {
   FILE *fp = fopen(fileName, "rb"); // open file
 
