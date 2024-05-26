@@ -33,3 +33,7 @@ assemble
 *.nav
 *.toc
 
+#ignore files for testing
+*.bin
+build/
+.vscode/

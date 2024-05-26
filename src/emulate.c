@@ -43,9 +43,44 @@ static void setup(state cstate) {
   cstate.PSTATE.V = 0;
 }
 
+static void loadfile(char fileName[], state* cstate) {
+  FILE *fp = fopen(fileName, "rb"); // open file
+
+  // check if file exists
+  if (fp == NULL) {
+    fprintf(stderr, "emulate: can't open %s\n", fileName);
+    exit(1);
+  }
+
+  // caclulate length of file
+  fseek(fp, 1, SEEK_END);
+  long fileSize = ftell(fp);
+  rewind(fp);
+
+  // check that program fits in memory
+  if (fileSize >= MEM_SIZE) {
+    fprintf(stderr, "emulate: %s is greater than 2MB\n", fileName);
+    exit(1);
+  }
+
+  //read file and store in memory
+  for (int i = 0; i < (fileSize-1); i++) {
+    cstate->memory[i] = getc(fp);
+  }
+
+  fclose(fp); // close file
+}
+
 int main(int argc, char **argv) {
+  // validate input arguments
+  if (argc > 3 || argc < 2) { 
+    fprintf(stderr, "Usage: emulate <file_in> [<file_out>]\n");
+    exit(1);
+  } 
   state cstate = { .ZR = 0 }; // initializes the machine
   setup(cstate);
+
+  loadfile(argv[1], &cstate);
 
   return EXIT_SUCCESS;
 }
