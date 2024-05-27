@@ -51,12 +51,15 @@ static void setup(state* cstate) {
 
 char* valueToStr(char* valueAsStr, uint64_t value) {
   sprintf(valueAsStr, "%lx", value); //creates the value as a string
+
   if (strlen(valueAsStr) < VALUE_STR_LENGTH) {
     int zeroes = VALUE_STR_LENGTH - strlen(valueAsStr);
     char *zeroString = malloc(VALUE_STR_LENGTH);
+
     for (int i = 0; i < zeroes; i++) { //adds enough zeroes to make it 16 digits
       strcat(zeroString, "0");
     }
+
     strcat(zeroString, valueAsStr);
     valueAsStr = zeroString;
   }
@@ -79,15 +82,18 @@ void outputFile(state* cstate, char outputString[]) {
     sprintf(line, "X%d = ", i);
     generateLine(value, line, outputString);
   }
+
   char pc[] = "PC = "; //generates the line for the program counter
   uint64_t value = cstate->PC;
   generateLine(value, pc, outputString);  
   char pstate[] = "PSTATE : "; //generates the line to be outputted for pstate
+
   if (cstate->PSTATE.Z==1) { strcat(pstate, "Z"); } else { strcat(pstate, "-"); }
   if (cstate->PSTATE.C==1) { strcat(pstate, "C"); } else { strcat(pstate, "-"); }
   if (cstate->PSTATE.N==1) { strcat(pstate, "N"); } else { strcat(pstate, "-"); }
   if (cstate->PSTATE.V==1) { strcat(pstate, "V\n"); } else { strcat(pstate, "-\n"); }
   strcat(outputString, pstate);
+
   for (int i = 0; i < MEM_SIZE; i++) { //checks non-zero memory and adds it to the output string
     if (cstate->memory[i] != 0) {
       char line[LINE_STR_LENGTH];
@@ -95,10 +101,47 @@ void outputFile(state* cstate, char outputString[]) {
       generateLine(cstate->memory[i], line, outputString); //adds any to the output
     }
   }
+
+// stores contents of input binary file to memory of machine
+static void loadfile(char fileName[], state* cstate) {
+  FILE *fp = fopen(fileName, "rb"); // open file
+
+  // check if file exists
+  if (fp == NULL) {
+    fprintf(stderr, "emulate: can't open %s\n", fileName);
+    exit(1);
+  }
+
+  // caclulate length of file
+  fseek(fp, 1, SEEK_END);
+  long fileSize = ftell(fp);
+  rewind(fp);
+
+  // check that program fits in memory
+  if (fileSize >= MEM_SIZE) {
+    fprintf(stderr, "emulate: %s is greater than 2MB\n", fileName);
+    exit(1);
+  }
+
+  //read file and store in memory
+  for (int i = 0; i < (fileSize-1); i++) {
+    cstate->memory[i] = getc(fp);
+  }
+
+  fclose(fp); // close file
 }
 
 int main(int argc, char **argv) {
+  // validate input arguments
+  if (argc > 3 || argc < 2) { 
+    fprintf(stderr, "Usage: emulate <file_in> [<file_out>]\n");
+    exit(1);
+  } 
+  
   state cstate = { .ZR = 0 }; // initializes the machine
   setup(&cstate);
+
+  loadfile(argv[1], &cstate);
+
   return EXIT_SUCCESS;
 }
