@@ -1,9 +1,8 @@
-#include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
+#include <stdbool.h>
 
 /*
 call example: ./emulate <file_in>            - output to stdout
@@ -20,10 +19,10 @@ TODO:
 
 // structure representing Processor State Register
 typedef struct {
-  atomic_bool N;
-  atomic_bool Z;
-  atomic_bool C;
-  atomic_bool V;
+  bool N;
+  bool Z;
+  bool C;
+  bool V;
 } PSTATE;
 
 // structure representing the state of the machine
@@ -101,6 +100,7 @@ void outputFile(state* cstate, char outputString[]) {
       generateLine(cstate->memory[i], line, outputString); //adds any to the output
     }
   }
+}
 
 // stores contents of input binary file to memory of machine
 static void loadfile(char fileName[], state* cstate) {
@@ -112,7 +112,7 @@ static void loadfile(char fileName[], state* cstate) {
     exit(1);
   }
 
-  // caclulate length of file
+  // calculate length of file
   fseek(fp, 1, SEEK_END);
   long fileSize = ftell(fp);
   rewind(fp);
