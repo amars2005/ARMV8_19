@@ -101,7 +101,7 @@ void outputFile(state* cstate, char outputString[]) {
       generateLine(cstate->memory[i], line, outputString); //adds any to the output
     }
   }
-}
+
 // stores contents of input binary file to memory of machine
 static void loadfile(char fileName[], state* cstate) {
   FILE *fp = fopen(fileName, "rb"); // open file
@@ -131,73 +131,6 @@ static void loadfile(char fileName[], state* cstate) {
   fclose(fp); // close file
 }
 
-// Functions for data processing instructions with registers
-
-void regAnd(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
-  // Bitwise AND on the values pointed to by rn and op2
-  *rd = *rn & *op2;
-} 
-
-void regClear(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
-  // BIC is the same as AND with the complement of the second operand
-  *rd = *rn & ~(*op2);
-}
-
-void regOr(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
-  // Bitwise OR on the values pointed to by rn and op2
-  *rd = *rn | *op2;
-}
-
-void regOrn(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
-  // Bitwise OR with the complement of the second operand
-  *rd = *rn | ~(*op2);
-}
-
-void regXor(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
-  // Bitwise XOR on the values pointed to by rn and op2
-  *rd = *rn ^ *op2;
-}
-
-void regXorn(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
-  // Bitwise XOR with the complement of the second operand
-  *rd = *rn ^ ~(*op2);
-}
-
-void updateFlags(uint64_t result, PSTATE *pstate) {
-  // Helper method to update the flags
-  // N is set to sign bit of the result (not sure if this is correct)
-  (*pstate).N = (result >> 63);
-  if (result == 0) {
-    (*pstate).Z = 1;
-  }
-  (*pstate).C = 0;
-  (*pstate).V = 0;
-}
-
-void regAndFlags(uint64_t *rd, uint64_t *rn, uint64_t *op2, PSTATE *pstate) {
-  // Bitwise AND on the values pointed to by rn and op2
-  uint64_t result = *rn & *op2;
-  *rd = result;
-  updateFlags(result, pstate);
-} 
-
-void regClearFlags(uint64_t *rd, uint64_t *rn, uint64_t *op2, PSTATE *pstate) {
-  // Bitwise BIC on rn and op2
-  uint64_t result = *rn & ~(*op2);
-  *rd = result;
-  updateFlags(result, pstate);
-} 
-
-void regmAdd(uint64_t *rd, uint64_t *ra, uint64_t *rn, uint64_t *rm) {
-  // Perform an mAdd on the values stored in ra, rn and rm
-  *rd = *ra + ((*rn) * (*rm));
-}
-
-void regmSub(uint64_t *rd, uint64_t *ra, uint64_t *rn, uint64_t *rm) {
-  // Perform an mSub on the values stored in ra, rn and rm
-  *rd = *ra - ((*rn) * (*rm));
-}
-
 int main(int argc, char **argv) {
   // validate input arguments
   if (argc > 3 || argc < 2) { 
@@ -212,3 +145,5 @@ int main(int argc, char **argv) {
 
   return EXIT_SUCCESS;
 }
+
+// zl4323 Initial Commit
