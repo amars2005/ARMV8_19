@@ -26,7 +26,7 @@ typedef struct {
 } PSTATE;
 
 // structure representing the state of the machine
-typedef struct {
+struct {
   uint8_t  memory[MEM_SIZE]; // Main Memory
   uint64_t R     [GREG_NUM]; // General Purpose Registers
   uint64_t PC              ; // Program Counter
@@ -35,14 +35,14 @@ typedef struct {
 } state;
 
 // sets the values of memory and registers to 0x0
-static void setup(state* cstate) {
-  for (int i; i < MEM_SIZE; i++) { cstate->memory[i] = 0; }
-  for (int i; i < GREG_NUM; i++) { cstate->R[i]      = 0; }
-  cstate->PC       = 0;
-  cstate->PSTATE.Z = 1;
-  cstate->PSTATE.C = 0;
-  cstate->PSTATE.N = 0;
-  cstate->PSTATE.V = 0;
+static void setup(void) {
+  for (int i; i < MEM_SIZE; i++) { state.memory[i] = 0; }
+  for (int i; i < GREG_NUM; i++) { state.R[i]      = 0; }
+  state.PC       = 0;
+  state.PSTATE.Z = 1;
+  state.PSTATE.C = 0;
+  state.PSTATE.N = 0;
+  state.PSTATE.V = 0;
 }
 
 #define VALUE_STR_LENGTH 16
@@ -74,36 +74,36 @@ void generateLine(uint64_t value, char line[], char outputString[]) {
   strcat(outputString, line); //adds the line to the string
 }
 
-void outputFile(state* cstate, char outputString[]) {
+void outputFile(char outputString[]) {
   for (int i = 0; i < GREG_NUM; i++) { //generates the line for the general registers
-    uint64_t value = cstate->R[i];
+    uint64_t value = state.R[i];
     char line[LINE_STR_LENGTH];
     sprintf(line, "X%d = ", i);
     generateLine(value, line, outputString);
   }
 
   char pc[] = "PC = "; //generates the line for the program counter
-  uint64_t value = cstate->PC;
+  uint64_t value = state.PC;
   generateLine(value, pc, outputString);  
   char pstate[] = "PSTATE : "; //generates the line to be outputted for pstate
 
-  if (cstate->PSTATE.Z==1) { strcat(pstate, "Z"); } else { strcat(pstate, "-"); }
-  if (cstate->PSTATE.C==1) { strcat(pstate, "C"); } else { strcat(pstate, "-"); }
-  if (cstate->PSTATE.N==1) { strcat(pstate, "N"); } else { strcat(pstate, "-"); }
-  if (cstate->PSTATE.V==1) { strcat(pstate, "V\n"); } else { strcat(pstate, "-\n"); }
+  if (state.PSTATE.Z==1) { strcat(pstate, "Z"); } else { strcat(pstate, "-"); }
+  if (state.PSTATE.C==1) { strcat(pstate, "C"); } else { strcat(pstate, "-"); }
+  if (state.PSTATE.N==1) { strcat(pstate, "N"); } else { strcat(pstate, "-"); }
+  if (state.PSTATE.V==1) { strcat(pstate, "V\n"); } else { strcat(pstate, "-\n"); }
   strcat(outputString, pstate);
 
   for (int i = 0; i < MEM_SIZE; i++) { //checks non-zero memory and adds it to the output string
-    if (cstate->memory[i] != 0) {
+    if (state.memory[i] != 0) {
       char line[LINE_STR_LENGTH];
       sprintf(line, "%d = ", i);
-      generateLine(cstate->memory[i], line, outputString); //adds any to the output
+      generateLine(state.memory[i], line, outputString); //adds any to the output
     }
   }
 }
 
 // stores contents of input binary file to memory of machine
-static void loadfile(char fileName[], state* cstate) {
+static void loadfile(char fileName[]) {
   FILE *fp = fopen(fileName, "rb"); // open file
 
   // check if file exists
@@ -125,23 +125,21 @@ static void loadfile(char fileName[], state* cstate) {
 
   //read file and store in memory
   for (int i = 0; i < (fileSize-1); i++) {
-    cstate->memory[i] = getc(fp);
+    state.memory[i] = getc(fp);
   }
 
   fclose(fp); // close file
 }
+
 
 int main(int argc, char **argv) {
   // validate input arguments
   if (argc > 3 || argc < 2) { 
     fprintf(stderr, "Usage: emulate <file_in> [<file_out>]\n");
     exit(1);
-  } 
-  
-  state cstate = { .ZR = 0 }; // initializes the machine
-  setup(&cstate);
+  }
 
-  loadfile(argv[1], &cstate);
+  loadfile(argv[1]);
 
   return EXIT_SUCCESS;
 }
