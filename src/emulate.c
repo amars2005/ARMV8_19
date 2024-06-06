@@ -18,6 +18,7 @@ TODO:
 #define MEM_SIZE (2 * (2 << 20)) // 2MB or 2*2^20 Bytes
 #define GREG_NUM 31              // Number of general registers
 
+//useful constants for decoding
 #define SF(i)    bits(i,31,31)
 #define OPC(i)   bits(i,29,30)
 #define M(i)     bits(i,28,28)
@@ -34,6 +35,15 @@ TODO:
 #define SH_OP(i) bits(i,10,15)
 #define RA(i)    bits(i,10,14)
 #define X(i)     bits(i,15,15)
+#define BT(i)    bits(i,29,31)
+#define SI26(i)  bits(i,0,25)
+#define SI19(i)  bits(i,5,23)
+#define COND(i)  bits(i,0,3)
+#define XN(i)    bits(i,5,9)
+
+#define BRANCH 0
+#define BREG   6
+#define BCOND  2
 
 // structure representing Processor State Register
 typedef struct {
@@ -197,11 +207,27 @@ typedef struct {
   uint64_t* Ra;
 } multiplyDPR;
 
+typedef struct {
+  int64_t offset;
+} branch;
+
+typedef struct {
+  uint64_t* Xn;
+} breg;
+
+typedef struct {
+  int64_t offset;
+  uint64_t cond;
+} bcond;
+
 typedef union {
     arithmeticDPI arithmeticDpi;
     wideMoveDPI wideMoveDpi;
     logicDPR logicDpr;
     multiplyDPR multiplyDpr;
+    branch branch;
+    breg breg;
+    bcond bcond;
     char itype[INAME_SIZE];
 } instruction;
 
@@ -249,6 +275,26 @@ instruction decodeMultiplyDPR(uint32_t i) {
   instr.multiplyDpr.Rn = state.R + RN(i);
   instr.multiplyDpr.Ra = state.R + RA(i);
   instr.multiplyDpr.X  = X(i);
+  return instr;
+}
+
+instruction decodeBranch(uint32_t i) {
+  instruction instr = { .itype = "branch" };
+  instr.branch.offset = SI26(i) * 4;
+  return instr;
+}
+
+instruction decodeBreg(uint32_t i) {
+  instruction instr = { .itype = "breg" };
+  instr.breg.Xn = (uint64_t*) XN(i);
+  return instr;
+}
+
+instruction decodeBcond(uint32_t i) {
+  instruction instr  = { .itype = "bcond" };
+  instr.bcond.offset = SI19(i) * 4;
+  instr.bcond.cond   = COND(i);
+  return instr;
 }
 
 instruction decodeDPI(uint32_t i) {
@@ -263,6 +309,7 @@ instruction decodeDPI(uint32_t i) {
             exit(1);
     };
 }
+
 instruction decodeDPR(uint32_t i) {
   uint8_t opr = OPR(i);
   bool    M   = M(i);
@@ -274,7 +321,22 @@ instruction decodeDPR(uint32_t i) {
 }
 
 instruction decodeLS(uint32_t i) {}
-instruction decodeB(uint32_t i) {}
+
+instruction decodeB(uint32_t i) {
+  int branch_t = BT(i);
+  switch (branch_t) {
+    case(BRANCH):
+      return decodeBranch(i);
+    case(BREG):
+      return decodeBreg(i);
+    case(BCOND):
+      return decodeBcond(i);
+    default:
+      //unsupported operation
+      fprintf(stderr, "Unknown instruction");
+      exit(1);
+  }
+}
 
 instruction decode(uint32_t i) {
     uint8_t op0 = OP0(i);
