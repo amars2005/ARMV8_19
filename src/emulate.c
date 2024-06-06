@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -131,6 +132,69 @@ static void loadfile(char fileName[]) {
   fclose(fp); // close file
 }
 
+uint32_t fetch(void) {
+    uint8_t* ci = state.memory + state.PC; // address of next instruction in memory
+    return (ci[0] + (ci[1] << 8) + (ci[2] << 16)); // convert 3 little endian bytes to 32 bit int
+}
+
+typedef struct {
+  uint64_t* Rd;
+  uint64_t* Rn;
+  uint32_t Op2;
+  char iname[];
+} arithmeticDPI;
+
+typedef struct {} wideMoveDPI;
+typedef struct {} arithmeticAndLogicDPR;
+typedef struct {} multiplyDPR;
+typedef struct {} bitwiseShift;
+
+typedef union {
+    arithmeticDPI arithmeticDpi;
+    wideMoveDPI wideMoveDpi;
+    arithmeticAndLogicDPR arithmeticAndLogicDpr;
+    multiplyDPR multiplyDpr;
+    bitwiseShift bitwiseShift1;
+    char itype[50];
+} instruction;
+
+instruction decodeArithmeticDPI(uint32_t i) {
+    i &= (uint32_t) (pow(2, 22) - 1); // bits [0,22]
+    instruction instr = { .itype = "arithmeticDPI" };
+    instr.arithmeticDpi.Rd = state.R + (i & 15); // bits [0, 4]
+    instr.arithmeticDpi.Rn = state.R + ((i >> 5) & 31); // bits [5,9]
+    instr.arithmeticDpi.Op2 = (i >> 10) & 4095; // bits [10,21]
+    if (i >> 22 == 1) { instr.arithmeticDpi.Op2 <<= 12; } // apply sh flag
+    return instr;
+}
+
+instruction decodeWideMoveDPI(uint32_t i) {}
+
+instruction decodeDPI(uint32_t i) {
+    uint8_t opi = (i >> 23) & 7; // get bits [25, 23]
+    switch (opi) {
+        case 2: // opi: 010
+            return decodeArithmeticDPI(i);
+        case 5: // opi: 101
+            return decodeWideMoveDPI(i);
+        default:
+            fprintf(stderr, "Unsupported operation");
+            exit(1);
+    };
+}
+instruction decodeDPR(uint32_t i) {}
+instruction decodeLS(uint32_t i) {}
+instruction decodeB(uint32_t i) {}
+
+instruction decode(uint32_t i) {
+    uint8_t op0 = (i >> 26) & 0xff; // get bits [25,28]
+    if ((op0 >> 1) == 3) { return decodeDPI(i); } // op0: 100x
+    if ((op0 & 7)  == 5) { return decodeDPR(i); } // op0: x101
+    if ((op0 & 5)  == 4) { return decodeLS(i);  } // op0: x1x0
+    if ((op0 >> 1) == 5) { return decodeB(i);   } // op0: 101x
+    fprintf(stderr, "Unknown operation");
+    exit(1);
+}
 
 int main(int argc, char **argv) {
   // validate input arguments
@@ -138,6 +202,8 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Usage: emulate <file_in> [<file_out>]\n");
     exit(1);
   }
+
+  setup();
 
   loadfile(argv[1]);
 
