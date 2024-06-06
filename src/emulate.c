@@ -141,6 +141,71 @@ static void loadfile(char fileName[]) {
   fclose(fp); // close file
 }
 
+// Functions for data processing instructions using immediate addressing
+
+void immAdd(uint64_t *rd, uint64_t *rn, uint64_t *imm12, bool w) {
+  // Bitwise ADD on the values pointed to by rn and imm12
+  *rd = *rn + *imm12;
+} 
+
+void immAddFlags(uint64_t *rd, uint64_t *rn, uint64_t *imm12, PSTATE *pstate, bool z) {
+  // Bitwise ADD on the values pointed to by rn and imm12
+  int result = *rn + *imm12;
+  *rd = result;
+
+  int bits;
+  if (!z) { int bits = 32; }
+  else { int bits = 64; }
+
+  (*pstate).N = (result >> (bits - 1));
+  if (result == 0) { (*pstate).Z = 1; }
+  if (result > (2 << bits)) { (*pstate).C = 1; }
+  if (result > (2 << (bits - 1))) { (*pstate).V = 1; }
+}
+
+void immSub(uint64_t *rd, uint64_t *rn, uint64_t *imm12) {
+  // Bitwise SUB on the values pointed to by rn and imm12
+  *rd = *rn - *imm12;
+} 
+
+void immSubFlags(uint64_t *rd, uint64_t *rn, uint64_t *imm12, PSTATE *pstate, bool z) {
+  // Bitwise SUB on the values pointed to by rn and imm12
+  int result = *rn - *imm12;
+  *rd = result;
+  
+  int bits;
+  if (!z) { int bits = 32; }
+  else { int bits = 64; }
+
+  (*pstate).N = (result >> (bits - 1));
+  if (result == 0) { (*pstate).Z = 1; }
+  if ((*pstate).N) { (*pstate).C = 1; }
+  if (result > (2 << (bits - 1))) { (*pstate).V = 1; }
+}
+
+void wMovN(uint64_t *rd, uint64_t *hw, uint64_t *imm16, bool z) {
+  //Sets the value in rd to the bitwise negation of imm16
+  int bits;
+  if (!z) { int bits = 32; }
+  else { int bits = 64; }
+
+  *rd = (2 << bits) + imm16 - (2 << (int) hw);
+}
+
+void wMovZ(uint64_t *rd, uint64_t *imm16) {
+  //Sets the value in rd to imm16
+  *rd = *imm16;
+}
+
+void wMovK(uint64_t *rd, uint64_t *hw, uint64_t *imm16, bool z) {
+  //Inserts the value of imm16 into rd, keeping all the other bits the same.
+  int bits;
+  if (!z) { int bits = 32; }
+  else { int bits = 64; }
+
+  *rd = *rd - bits(*rd, *hw, *hw + 15) + (*imm16 * 2 << *hw);
+}
+
 // Functions for data processing instructions with registers
 
 void regAnd(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
