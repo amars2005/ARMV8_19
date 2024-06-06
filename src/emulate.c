@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include <assert.h>
 
 /*
 call example: ./emulate <file_in>            - output to stdout
@@ -101,6 +102,7 @@ void outputFile(state* cstate, char outputString[]) {
       generateLine(cstate->memory[i], line, outputString); //adds any to the output
     }
   }
+}
 
 // stores contents of input binary file to memory of machine
 static void loadfile(char fileName[], state* cstate) {
@@ -131,7 +133,141 @@ static void loadfile(char fileName[], state* cstate) {
   fclose(fp); // close file
 }
 
+
+// an2823 working with functions (and all the code written up above)
+
+void lsl32(uint64_t *rn, int shift_amount) {
+  uint32_t lowerBits = (uint32_t) (*rn & 0xFFFFFFFF);
+  *rn = (uint64_t) (lowerBits << shift_amount);
+}
+
+void lsr32(uint64_t *rn, int shift_amount) {
+  uint32_t lowerBits = (uint32_t) (*rn & 0xFFFFFFFF);
+  *rn = (uint64_t) (lowerBits >> shift_amount);
+}
+
+void asr32(uint64_t *rn, int shift_amount) {
+  uint32_t lowerBits = (uint32_t) (*rn & 0xFFFFFFFF);
+  uint32_t sign = lowerBits & 0x80000000;
+  for (int i = 0; i < shift_amount; i++) {
+    lowerBits >>= 1;
+    lowerBits |= sign;
+  }
+  *rn = (uint64_t) lowerBits;
+}
+
+void ror32(uint64_t *rn, int shift_amount) {
+  uint32_t lowerBits = (uint32_t) (*rn & 0xFFFFFFFF);
+  for (int i = 0; i < shift_amount; i++) {
+    uint32_t lsb = lowerBits & 0x00000001;
+    lowerBits >>= 1;
+    if (lsb != 0) {
+      lowerBits |= 0x80000000;
+    } else {
+      lowerBits &= 0x7FFFFFFF;
+    }
+  }
+  *rn = lowerBits;
+}
+
+void lsl64(uint64_t *rn, int shift_amount) {
+  *rn <<= shift_amount;
+}
+
+void lsr64(uint64_t *rn, int shift_amount) {
+  *rn >>= shift_amount;
+}
+
+void asr64(uint64_t *rn, int shift_amount) {
+  uint64_t sign = *rn & 0x8000000000000000;
+  for (int i = 0; i < shift_amount; i++) {
+    *rn >>= 1;
+    *rn = *rn | sign;
+  }
+}
+
+void ror64(uint64_t *rn, int shift_amount) {
+  for (int i = 0; i < shift_amount; i++) {
+    uint64_t lsb = *rn & 0x0000000000000001;
+    *rn >>= 1;
+    if (lsb != 0) {
+      *rn |= 0x8000000000000000;
+    } else {
+      *rn &= 0x7FFFFFFFFFFFFFFF;
+    }
+  } 
+}
+
+
+// First input is the register number
+// Second input is the register mode (32 or 64 bit) represented by 0 and 1 respectively
+// Third input is the instruction type (lsl, lsr, asr, ror)
+// 0, 1, 2, 3 for lsl, lsr, asr, ror respectively
+void bitwiseShift(uint64_t *rn, int mode, int instruction, int shift_amount) {
+  assert(instruction >= 0 && instruction <= 3);
+
+  assert(mode == 0 || mode == 1);
+
+  if (mode == 0) {
+    switch (instruction) {
+      case 0: lsl32(rn, shift_amount); break;
+      case 1: lsr32(rn, shift_amount); break;
+      case 2: asr32(rn, shift_amount); break;
+      case 3: ror32(rn, shift_amount); break;
+    }
+  } else {
+    switch (instruction) {
+      case 0: lsl64(rn, shift_amount); break;
+      case 1: lsr64(rn, shift_amount); break;
+      case 2: asr64(rn, shift_amount); break;
+      case 3: ror64(rn, shift_amount); break;
+    }
+  }
+}
+
+// an2823 programming Section 1.7 on addressing modes
+int unsignedOffset(int sf, uint64_t *xn, int imm12) {
+  if (sf == 0) {
+    return *xn + imm12 * 4;
+  } 
+  return *xn + imm12 * 8;
+}
+
+int preIndex(uint64_t *xn, int64_t simm9) {
+  *xn += simm9;
+  return *xn;
+} 
+
+int postIndex(uint64_t *xn, int64_t simm9) {
+  uint64_t prevXn = *xn;
+  *xn += simm9;
+  return prevXn; 
+}
+
+int registerOffset(uint64_t *xn, uint64_t *xm) {
+  return *xn + *xm;
+}
+
+int loadLiteral(uint64_t simm19, uint64_t PC) {
+  return PC + (simm19 * 4);
+}
+
 int main(int argc, char **argv) {
+  // an2823 debugging some of the bitwise shifts programmed
+  uint64_t reg1 = 0x765a33f;
+  uint64_t reg2 = -1600;
+  uint64_t *r1 = &reg1;
+  uint64_t *r2 = &reg2;
+  int shift_num = 4;
+
+  for (int i = 0; i < 2; i++) {
+    for (int j = 0; j < 4; j++) {
+      bitwiseShift(r2, i, j, shift_num);
+      printf("Reg1: %" PRIu64 "\n", reg1);
+      printf("Reg1 Hex: 0x%" PRIx64 "\n\n", reg1);
+    }
+  }
+
   // validate input arguments
   if (argc > 3 || argc < 2) { 
     fprintf(stderr, "Usage: emulate <file_in> [<file_out>]\n");
@@ -145,5 +281,6 @@ int main(int argc, char **argv) {
 
   return EXIT_SUCCESS;
 }
+
 
 // zl4323 Initial Commit
