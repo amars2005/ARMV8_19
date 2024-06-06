@@ -45,6 +45,15 @@ TODO:
 #define BREG   6
 #define BCOND  2
 
+typedef enum { arithmeticDPIt, wideMoveDPIt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt } instruction_t;
+typedef enum { add, adds, sub, subs } arithmeticDPI_t;
+typedef enum { and, orr, eor, ands} logicDPR_t;
+typedef enum { bic, orn, eon, bics} logicDPRN_t;
+
+#define movn 0
+#define movz 2
+#define movk 3
+
 // structure representing Processor State Register
 typedef struct {
   bool N;
@@ -197,6 +206,7 @@ typedef struct {
   uint64_t* Rn;
   uint64_t* Op2;
   uint64_t opc;
+  bool N;
 } logicDPR;
 
 typedef struct {
@@ -228,11 +238,11 @@ typedef union {
     branch branch;
     breg breg;
     bcond bcond;
-    char itype[INAME_SIZE];
+    instruction_t itype;
 } instruction;
 
 instruction decodeArithmeticDPI(uint32_t i) {
-  instruction instr       = { .itype = "arithmeticDPI" };
+  instruction instr       = { .itype = arithmeticDPIt };
   instr.arithmeticDpi.sf  = SF(i);
   instr.arithmeticDpi.Rd  = state.R + RD(i);
   instr.arithmeticDpi.Rn  = state.R + RN(i);
@@ -243,7 +253,7 @@ instruction decodeArithmeticDPI(uint32_t i) {
 }
 
 instruction decodeWideMoveDPI(uint32_t i) {
-  instruction instr     = { .itype = "wideMoveDPI" };
+  instruction instr     = { .itype = wideMoveDPIt };
   instr.wideMoveDpi.Rd  = state.R + RD(i);
   instr.wideMoveDpi.Op  = OP2(i);
   instr.wideMoveDpi.sf  = SF(i);
@@ -257,7 +267,7 @@ instruction decodeArithmeticDPR(uint32_t i) {
 }
 
 instruction decodeLogicDPR(uint32_t i) {
-  instruction instr  = { .itype = "logicDPR" };
+  instruction instr  = { .itype = logicDPRt };
   instr.logicDpr.Op2 = state.R + bitwiseShift(RM(i), SF(i), SHIFT(i), SH_OP(i));
   instr.logicDpr.Rd  = state.R + RD(i);
   instr.logicDpr.Rn  = state.R + RN(i); 
@@ -269,7 +279,7 @@ instruction decodeLogicDPR(uint32_t i) {
 }
 
 instruction decodeMultiplyDPR(uint32_t i) {
-  instruction instr    = { .itype = "multiplyDPR" };
+  instruction instr    = { .itype = multiplyDPRt };
   instr.multiplyDpr.sf = SF(i);
   instr.multiplyDpr.Rd = state.R + RD(i);
   instr.multiplyDpr.Rn = state.R + RN(i);
@@ -279,19 +289,19 @@ instruction decodeMultiplyDPR(uint32_t i) {
 }
 
 instruction decodeBranch(uint32_t i) {
-  instruction instr = { .itype = "branch" };
+  instruction instr = { .itype = brancht };
   instr.branch.offset = SI26(i) * 4;
   return instr;
 }
 
 instruction decodeBreg(uint32_t i) {
-  instruction instr = { .itype = "breg" };
+  instruction instr = { .itype = bregt };
   instr.breg.Xn = (uint64_t*) XN(i);
   return instr;
 }
 
 instruction decodeBcond(uint32_t i) {
-  instruction instr  = { .itype = "bcond" };
+  instruction instr  = { .itype = bcondt };
   instr.bcond.offset = SI19(i) * 4;
   instr.bcond.cond   = COND(i);
   return instr;
@@ -346,6 +356,99 @@ instruction decode(uint32_t i) {
     if ((op0 >> 1) == 5) { return decodeB(i);   } // op0: 101x
     fprintf(stderr, "Unknown operation");
     exit(1);
+}
+
+////////////////
+//EXECUTION PART
+////////////////
+
+void executeArithmeticDPI(instruction i) {
+  switch (i.arithmeticDpi.opc) {
+    case (add):
+      break;
+    case (adds):
+      break;
+    case (sub):
+      break;
+    case (subs):
+      break;
+  }
+}
+
+void executeWideMoveDPI(instruction i) {
+  switch (i.wideMoveDpi.opc) {
+    case (movn):
+      break;
+    case (movz):
+      break;
+    case (movk):
+      break;
+  }
+}
+
+void executeLogicDPR(instruction i) {
+  if (i.logicDpr.N) {
+    switch (i.logicDpr.opc) {
+      case (bic):
+        break;
+      case (orn):
+        break;
+      case (eon):
+        break;
+      case (bics):
+        break;
+    }
+  } else {
+    switch (i.logicDpr.opc) {
+      case (and):
+        break;
+      case (orr):
+        break;
+      case (eor):
+        break;
+      case (ands):
+        break;
+    }
+  }
+}
+
+void executeMultiplyDPR(instruction i) {
+  if (i.multiplyDpr.X) {
+    
+  } else {
+
+  }
+}
+
+void executeBranch(instruction i) {
+
+}
+
+void executeBreg(instruction i) {
+
+}
+
+void executeBcond(instruction i) {
+  
+}
+
+void execute(instruction i) {
+  switch (i.itype) {
+    case (arithmeticDPIt):
+      executeArithmeticDPI(i);
+    case (wideMoveDPIt):
+      executeWideMoveDPI(i);
+    case (logicDPRt):
+      executeLogicDPR(i);
+    case (multiplyDPRt):
+      executeMultiplyDPR(i);
+    case (brancht):
+      executeBranch(i);
+    case (bregt):
+      executeBreg(i);
+    case (bcondt):
+      executeBcond(i);
+  }
 }
 
 int main(int argc, char **argv) {
