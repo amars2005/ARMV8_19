@@ -32,6 +32,8 @@ TODO:
 #define RM(i)    bits(i,16,20)
 #define OPR(i)   bits(i,21,24)
 #define SH_OP(i) bits(i,10,15)
+#define RA(i)    bits(i,10,14)
+#define X(i)     bits(i,15,15)
 
 // structure representing Processor State Register
 typedef struct {
@@ -183,11 +185,17 @@ typedef struct {
 typedef struct {
   uint64_t* Rd;
   uint64_t* Rn;
-  uint64_t Op2;
+  uint64_t* Op2;
   uint64_t opc;
 } logicDPR;
 
-typedef struct {} multiplyDPR;
+typedef struct {
+  bool      sf;
+  bool       X;
+  uint64_t* Rd;
+  uint64_t* Rn;
+  uint64_t* Ra;
+} multiplyDPR;
 
 typedef union {
     arithmeticDPI arithmeticDpi;
@@ -222,9 +230,26 @@ instruction decodeArithmeticDPR(uint32_t i) {
   return instr;
 }
 
+instruction decodeLogicDPR(uint32_t i) {
+  instruction instr  = { .itype = "logicDPR" };
+  instr.logicDpr.Op2 = state.R + bitwiseShift(RM(i), SF(i), SHIFT(i), SH_OP(i));
+  instr.logicDpr.Rd  = state.R + RD(i);
+  instr.logicDpr.Rn  = state.R + RN(i); 
+  instr.logicDpr.opc = OPC(i);
+  //check for 11111 which represets ZR
+  if (instr.logicDpr.Op2 == (uint64_t*) 63) { instr.logicDpr.Op2 =  (uint64_t* const) &state.ZR; }
+  if (instr.logicDpr.Rn  == (uint64_t*) 63) { instr.logicDpr.Rn  =  (uint64_t* const) &state.ZR; }
+  return instr;
+}
 
-
-instruction decodeMultiplyDPR(uint32_t i) {}
+instruction decodeMultiplyDPR(uint32_t i) {
+  instruction instr    = { .itype = "multiplyDPR" };
+  instr.multiplyDpr.sf = SF(i);
+  instr.multiplyDpr.Rd = state.R + RD(i);
+  instr.multiplyDpr.Rn = state.R + RN(i);
+  instr.multiplyDpr.Ra = state.R + RA(i);
+  instr.multiplyDpr.X  = X(i);
+}
 
 instruction decodeDPI(uint32_t i) {
     uint8_t opi = OPI(i);
