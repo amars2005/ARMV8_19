@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#include <stdbool.h>
 
 /*
 call example: ./emulate <file_in>            - output to stdout
@@ -18,6 +19,14 @@ TODO:
 #define MEM_SIZE (2 * (2 << 20)) // 2MB or 2*2^20 Bytes
 #define GREG_NUM 31              // Number of general registers
 
+#define EQ 0 // 0000
+#define NE 1 // 0001
+#define GE 10 // 1010
+#define LT 11 // 1011
+#define GT 12 // 1100
+#define LE 13 // 1101
+#define AL 14 // 1110
+
 // structure representing Processor State Register
 typedef struct {
   atomic_bool N;
@@ -27,23 +36,23 @@ typedef struct {
 } PSTATE;
 
 // structure representing the state of the machine
-typedef struct {
+struct {
   uint8_t  memory[MEM_SIZE]; // Main Memory
   uint64_t R     [GREG_NUM]; // General Purpose Registers
   uint64_t PC              ; // Program Counter
   PSTATE   PSTATE          ; // Processor State
   const uint64_t ZR        ; // Zero Register
-} state;
+} state = { .ZR = 0 };
 
 // sets the values of memory and registers to 0x0
-static void setup(state* cstate) {
-  for (int i; i < MEM_SIZE; i++) { cstate->memory[i] = 0; }
-  for (int i; i < GREG_NUM; i++) { cstate->R[i]      = 0; }
-  cstate->PC       = 0;
-  cstate->PSTATE.Z = 1;
-  cstate->PSTATE.C = 0;
-  cstate->PSTATE.N = 0;
-  cstate->PSTATE.V = 0;
+static void setup(void) {
+  for (int i; i < MEM_SIZE; i++) { state.memory[i] = 0; }
+  for (int i; i < GREG_NUM; i++) { state.R[i]      = 0; }
+  state.PC       = 0;
+  state.PSTATE.Z = 1;
+  state.PSTATE.C = 0;
+  state.PSTATE.N = 0;
+  state.PSTATE.V = 0;
 }
 
 #define VALUE_STR_LENGTH 16
@@ -75,36 +84,36 @@ void generateLine(uint64_t value, char line[], char outputString[]) {
   strcat(outputString, line); //adds the line to the string
 }
 
-void outputFile(state* cstate, char outputString[]) {
+void outputFile(char outputString[]) {
   for (int i = 0; i < GREG_NUM; i++) { //generates the line for the general registers
-    uint64_t value = cstate->R[i];
+    uint64_t value = state.R[i];
     char line[LINE_STR_LENGTH];
     sprintf(line, "X%d = ", i);
     generateLine(value, line, outputString);
   }
 
   char pc[] = "PC = "; //generates the line for the program counter
-  uint64_t value = cstate->PC;
+  uint64_t value = state.PC;
   generateLine(value, pc, outputString);  
   char pstate[] = "PSTATE : "; //generates the line to be outputted for pstate
 
-  if (cstate->PSTATE.Z==1) { strcat(pstate, "Z"); } else { strcat(pstate, "-"); }
-  if (cstate->PSTATE.C==1) { strcat(pstate, "C"); } else { strcat(pstate, "-"); }
-  if (cstate->PSTATE.N==1) { strcat(pstate, "N"); } else { strcat(pstate, "-"); }
-  if (cstate->PSTATE.V==1) { strcat(pstate, "V\n"); } else { strcat(pstate, "-\n"); }
+  if (state.PSTATE.Z==1) { strcat(pstate, "Z"); } else { strcat(pstate, "-"); }
+  if (state.PSTATE.C==1) { strcat(pstate, "C"); } else { strcat(pstate, "-"); }
+  if (state.PSTATE.N==1) { strcat(pstate, "N"); } else { strcat(pstate, "-"); }
+  if (state.PSTATE.V==1) { strcat(pstate, "V\n"); } else { strcat(pstate, "-\n"); }
   strcat(outputString, pstate);
 
   for (int i = 0; i < MEM_SIZE; i++) { //checks non-zero memory and adds it to the output string
-    if (cstate->memory[i] != 0) {
+    if (state.memory[i] != 0) {
       char line[LINE_STR_LENGTH];
       sprintf(line, "%d = ", i);
-      generateLine(cstate->memory[i], line, outputString); //adds any to the output
+      generateLine(state.memory[i], line, outputString); //adds any to the output
     }
   }
 }
 
 // stores contents of input binary file to memory of machine
-static void loadfile(char fileName[], state* cstate) {
+static void loadfile(char fileName[]) {
   FILE *fp = fopen(fileName, "rb"); // open file
 
   // check if file exists
@@ -126,7 +135,7 @@ static void loadfile(char fileName[], state* cstate) {
 
   //read file and store in memory
   for (int i = 0; i < (fileSize-1); i++) {
-    cstate->memory[i] = getc(fp);
+    state.memory[i] = getc(fp);
   }
 
   fclose(fp); // close file
@@ -164,29 +173,29 @@ void regXorn(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
   *rd = *rn ^ ~(*op2);
 }
 
-void updateFlags(uint64_t result, PSTATE *pstate) {
+void updateFlags(uint64_t result) {
   // Helper method to update the flags
   // N is set to sign bit of the result (not sure if this is correct)
-  (*pstate).N = (result >> 63);
+  state.PSTATE.N = (result >> 63);
   if (result == 0) {
-    (*pstate).Z = 1;
+    state.PSTATE.Z = 1;
   }
-  (*pstate).C = 0;
-  (*pstate).V = 0;
+  state.PSTATE.C = 0;
+  state.PSTATE.V = 0;
 }
 
-void regAndFlags(uint64_t *rd, uint64_t *rn, uint64_t *op2, PSTATE *pstate) {
+void regAndFlags(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
   // Bitwise AND on the values pointed to by rn and op2
   uint64_t result = *rn & *op2;
   *rd = result;
-  updateFlags(result, pstate);
+  updateFlags(result);
 } 
 
-void regClearFlags(uint64_t *rd, uint64_t *rn, uint64_t *op2, PSTATE *pstate) {
+void regClearFlags(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
   // Bitwise BIC on rn and op2
   uint64_t result = *rn & ~(*op2);
   *rd = result;
-  updateFlags(result, pstate);
+  updateFlags(result);
 } 
 
 void regmAdd(uint64_t *rd, uint64_t *ra, uint64_t *rn, uint64_t *rm) {
@@ -199,6 +208,52 @@ void regmSub(uint64_t *rd, uint64_t *ra, uint64_t *rn, uint64_t *rm) {
   *rd = *ra - ((*rn) * (*rm));
 }
 
+// Functions for branch instructions (1.8)
+
+void unCondBranch(uint64_t offset) {
+  // Apply the offset to the PC
+  state.PC += offset; 
+}
+
+void registerBranch(uint64_t *xn) {
+  // Branch directly to the address stored in xn
+  state.PC = (*xn);
+}
+
+void condBranch(uint64_t offset, uint64_t cond) {
+  // Apply the offset to the PC iff cond is satisfied by PSTATE
+  bool condEval;
+  switch (cond) {
+    case EQ:
+      condEval = (state.PSTATE.Z == 1);
+      break;
+    case NE:
+      condEval = (state.PSTATE.Z == 0);
+      break;
+    case GE:
+      condEval = (state.PSTATE.N == state.PSTATE.V);
+      break;
+    case LT:
+      condEval = (state.PSTATE.N != state.PSTATE.V);
+      break;
+    case GT:
+      condEval = (state.PSTATE.N == state.PSTATE.V) && (state.PSTATE.Z == 0);
+      break;
+    case LE:
+      condEval = !((state.PSTATE.N == state.PSTATE.V) && (state.PSTATE.Z == 0));
+      break;
+    case AL:
+      condEval = true;
+      break;
+    default:
+      // undefined behaviour
+      fprintf(stderr, "Condition with code %ld is not defined", cond);
+  }
+  if (condEval) {
+    unCondBranch(offset);
+  }
+}
+
 int main(int argc, char **argv) {
   // validate input arguments
   if (argc > 3 || argc < 2) { 
@@ -206,10 +261,8 @@ int main(int argc, char **argv) {
     exit(1);
   } 
   
-  state cstate = { .ZR = 0 }; // initializes the machine
-  setup(&cstate);
-
-  loadfile(argv[1], &cstate);
+  setup();
+  loadfile(argv[1]);
 
   return EXIT_SUCCESS;
 }
