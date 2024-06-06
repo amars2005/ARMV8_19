@@ -140,11 +140,16 @@ uint32_t fetch(void) {
 typedef struct {
   uint64_t* Rd;
   uint64_t* Rn;
-  uint32_t Op2;
-  char iname[];
+  uint32_t  Op2;
+  char iname[50];
 } arithmeticDPI;
 
-typedef struct {} wideMoveDPI;
+typedef struct {
+  uint64_t* Rd;
+  uint16_t  Op;
+  char iname[50];
+} wideMoveDPI;
+
 typedef struct {} arithmeticAndLogicDPR;
 typedef struct {} multiplyDPR;
 typedef struct {} bitwiseShift;
@@ -159,16 +164,24 @@ typedef union {
 } instruction;
 
 instruction decodeArithmeticDPI(uint32_t i) {
-    i &= (uint32_t) (pow(2, 22) - 1); // bits [0,22]
-    instruction instr = { .itype = "arithmeticDPI" };
-    instr.arithmeticDpi.Rd = state.R + (i & 15); // bits [0, 4]
-    instr.arithmeticDpi.Rn = state.R + ((i >> 5) & 31); // bits [5,9]
-    instr.arithmeticDpi.Op2 = (i >> 10) & 4095; // bits [10,21]
+    i &= (uint32_t) (pow(2, 22) - 1);                // bits [0,22]
+    instruction instr       = { .itype = "arithmeticDPI" };
+    strcpy(instr.arithmeticDpi.iname, "arithmeticDPI");
+    instr.arithmeticDpi.Rd  = state.R + (i & 15);         // bits [0, 4]
+    instr.arithmeticDpi.Rn  = state.R + ((i >> 5) & 31);  // bits [5,9]
+    instr.arithmeticDpi.Op2 = (i >> 10) & 4095;           // bits [10,21]
     if (i >> 22 == 1) { instr.arithmeticDpi.Op2 <<= 12; } // apply sh flag
     return instr;
 }
 
-instruction decodeWideMoveDPI(uint32_t i) {}
+instruction decodeWideMoveDPI(uint32_t i) {
+  i &= (uint32_t) (pow(2, 22) - 1);     // bits [0,22]
+  instruction instr    = { .itype = "wideMoveDPI" };
+  strcpy(instr.wideMoveDpi.iname, "wideMoveDPI");
+  instr.wideMoveDpi.Rd = state.R + (i & 15); // bits [0, 4]
+  instr.wideMoveDpi.Op = (i >> 10) & 4095;   // bits [10,21]
+  return instr;
+}
 
 instruction decodeDPI(uint32_t i) {
     uint8_t opi = (i >> 23) & 7; // get bits [25, 23]
