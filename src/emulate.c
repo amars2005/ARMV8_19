@@ -18,6 +18,21 @@ TODO:
 #define MEM_SIZE (2 * (2 << 20)) // 2MB or 2*2^20 Bytes
 #define GREG_NUM 31              // Number of general registers
 
+#define SF(i)    bits(i,31,31)
+#define OPC(i)   bits(i,29,30)
+#define M(i)     bits(i,28,28)
+#define OP0(i)   bits(i,25,28)
+#define OPI(i)   bits(i,23,25)
+#define OP(i)    bits(i,5,22)
+#define RD(i)    bits(i,0,4)
+#define RN(i)    bits(i,5,9)
+#define OP2(i)   bits(i,10,21)
+#define SH(i)    bits(i,22,22)
+#define SHIFT(i) bits(i,22,23)
+#define RM(i)    bits(i,16,20)
+#define OPR(i)   bits(i,21,24)
+#define SH_OP(i) bits(i,10,15)
+
 // structure representing Processor State Register
 typedef struct {
   bool N;
@@ -33,7 +48,7 @@ struct {
   uint64_t PC              ; // Program Counter
   PSTATE   PSTATE          ; // Processor State
   const uint64_t ZR        ; // Zero Register
-} state;
+} state = { .ZR = 0 };
 
 // sets the values of memory and registers to 0x0
 static void setup(void) {
@@ -132,59 +147,87 @@ static void loadfile(char fileName[]) {
   fclose(fp); // close file
 }
 
-uint32_t fetch(void) {
+///////////////////
+//FETCH-DECODE part
+///////////////////
+
+// returns the bits [start, end] of i
+static uint64_t bits(uint64_t i, int start, int end) {
+  return (((i) >> (start)) & (uint32_t) pow(2, (end) - (start) + 1) - 1);
+}
+
+static uint32_t fetch(void) {
     uint8_t* ci = state.memory + state.PC; // address of next instruction in memory
     return (ci[0] + (ci[1] << 8) + (ci[2] << 16)); // convert 3 little endian bytes to 32 bit int
 }
 
+extern uint64_t bitwiseShift(uint64_t rn, int mode, int instruction, int shift_amount);
+
+#define INAME_SIZE 50
+
 typedef struct {
+  bool      sf;
   uint64_t* Rd;
   uint64_t* Rn;
   uint32_t  Op2;
-  char iname[50];
+  uint64_t  opc;
 } arithmeticDPI;
 
 typedef struct {
+  bool      sf;
   uint64_t* Rd;
   uint16_t  Op;
-  char iname[50];
+  uint64_t opc;
 } wideMoveDPI;
 
-typedef struct {} arithmeticAndLogicDPR;
+typedef struct {
+  uint64_t* Rd;
+  uint64_t* Rn;
+  uint64_t Op2;
+  uint64_t opc;
+} logicDPR;
+
 typedef struct {} multiplyDPR;
-typedef struct {} bitwiseShift;
 
 typedef union {
     arithmeticDPI arithmeticDpi;
     wideMoveDPI wideMoveDpi;
-    arithmeticAndLogicDPR arithmeticAndLogicDpr;
+    logicDPR logicDpr;
     multiplyDPR multiplyDpr;
-    bitwiseShift bitwiseShift1;
-    char itype[50];
+    char itype[INAME_SIZE];
 } instruction;
 
 instruction decodeArithmeticDPI(uint32_t i) {
-    i &= (uint32_t) (pow(2, 22) - 1);                // bits [0,22]
-    instruction instr       = { .itype = "arithmeticDPI" };
-    strcpy(instr.arithmeticDpi.iname, "arithmeticDPI");
-    instr.arithmeticDpi.Rd  = state.R + (i & 15);         // bits [0, 4]
-    instr.arithmeticDpi.Rn  = state.R + ((i >> 5) & 31);  // bits [5,9]
-    instr.arithmeticDpi.Op2 = (i >> 10) & 4095;           // bits [10,21]
-    if (i >> 22 == 1) { instr.arithmeticDpi.Op2 <<= 12; } // apply sh flag
-    return instr;
-}
-
-instruction decodeWideMoveDPI(uint32_t i) {
-  i &= (uint32_t) (pow(2, 22) - 1);     // bits [0,22]
-  instruction instr    = { .itype = "wideMoveDPI" };
-  strcpy(instr.wideMoveDpi.iname, "wideMoveDPI");
-  instr.wideMoveDpi.Rd = state.R + (i & 15); // bits [0, 4]
-  instr.wideMoveDpi.Op = (i >> 10) & 4095;   // bits [10,21]
+  instruction instr       = { .itype = "arithmeticDPI" };
+  instr.arithmeticDpi.sf  = SF(i);
+  instr.arithmeticDpi.Rd  = state.R + RD(i);
+  instr.arithmeticDpi.Rn  = state.R + RN(i);
+  instr.arithmeticDpi.Op2 = OP2(i);
+  instr.arithmeticDpi.opc = OPC(i);
+  if (SH(i) == 1) { instr.arithmeticDpi.Op2 <<= 12; } // apply sh flag
   return instr;
 }
 
+instruction decodeWideMoveDPI(uint32_t i) {
+  instruction instr     = { .itype = "wideMoveDPI" };
+  instr.wideMoveDpi.Rd  = state.R + RD(i);
+  instr.wideMoveDpi.Op  = OP2(i);
+  instr.wideMoveDpi.sf  = SF(i);
+  instr.wideMoveDpi.opc = OPC(i);
+  return instr;
+}
+
+instruction decodeArithmeticDPR(uint32_t i) {
+  instruction instr;
+  return instr;
+}
+
+
+
+instruction decodeMultiplyDPR(uint32_t i) {}
+
 instruction decodeDPI(uint32_t i) {
-    uint8_t opi = (i >> 23) & 7; // get bits [25, 23]
+    uint8_t opi = OPI(i);
     switch (opi) {
         case 2: // opi: 010
             return decodeArithmeticDPI(i);
@@ -195,12 +238,21 @@ instruction decodeDPI(uint32_t i) {
             exit(1);
     };
 }
-instruction decodeDPR(uint32_t i) {}
+instruction decodeDPR(uint32_t i) {
+  uint8_t opr = OPR(i);
+  bool    M   = M(i);
+  if (M == 0 && (opr & 9) == 8) { return decodeArithmeticDPR(i); } // opr: 1xx0
+  if (M == 0 && (opr & 8) == 0) { return decodeLogicDPR(i); }      // opr: 0xxx
+  if (M == 1 && opr       == 8) { return decodeMultiplyDPR(i); }   // opr: 1000
+  fprintf(stderr, "Unknown operation");
+  exit(1);
+}
+
 instruction decodeLS(uint32_t i) {}
 instruction decodeB(uint32_t i) {}
 
 instruction decode(uint32_t i) {
-    uint8_t op0 = (i >> 26) & 0xff; // get bits [25,28]
+    uint8_t op0 = OP0(i);
     if ((op0 >> 1) == 3) { return decodeDPI(i); } // op0: 100x
     if ((op0 & 7)  == 5) { return decodeDPR(i); } // op0: x101
     if ((op0 & 5)  == 4) { return decodeLS(i);  } // op0: x1x0
