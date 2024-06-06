@@ -4,7 +4,7 @@
 
 \begin{document}
 
-\title{ARM Checkpoint Group 19 07/06/24}
+\title{ARM Checkpoint Group 19}
 \author{Zachary Lazar, Serhii Popov, Adam Marshall, Arya Narang}
 
 \maketitle
@@ -18,8 +18,8 @@ Zakk the execution of data processing instructions with registers~(1.5) and bran
 and Arya the execution of shifts to operands~(1.6) and single data transfer instructions~(1.7). This approach
 enabled us to work on the project at our own pace when necessary.
 
-We used the name feature convention for branching, where each member of the group created a branch for each task
-they had been assigned to complete. We began our commits with either 'feat' or 'fix' to be clear what each commit 
+We used the name feature convention for git branches, where each member of the group created a branch for each task
+they had been assigned to complete. We began our commits with either ``feat" or ``fix" to be clear what each commit 
 was achieving. We created an instagram group chat to coordinate work between one another and be able to discuss
 our implementations of certain features remotely.
 
@@ -34,8 +34,8 @@ the tasks effectively.
 \section{Implementation Strategies}
 % How you have structured your emulator
 The state of the emulator is stored as a global struct with a single instance. It stores basal pointers to 
-main~memory and the registers, as well as the contents of the program counter and zero register. The pstate
-register is represented as a struct stored within state. Each of the flags within pstate are stored as a field
+main~memory and the registers, as well as the contents of the program counter and zero register. The PSTATE
+register is represented as a struct stored within state. Each of the flags within PSTATE are stored as a field
 of the struct. Instructions are represented as a union of structs, where each struct within the union represents
 a different type of instruction. This enabled us to concisely simulate the decode phase. The execute phase was
 largely implemented as helper functions, which were relevantly called from the decode phase after the instruction
