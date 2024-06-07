@@ -40,12 +40,15 @@ TODO:
 #define SI19(i)  bits(i,5,23)
 #define COND(i)  bits(i,0,3)
 #define XN(i)    bits(i,5,9)
+#define L(i)     bits(i,22,22)
+#define U(i)     bits(i,24,24)
+#define SFt(i)   bits(i,30,30)
 
 #define BRANCH 0
 #define BREG   6
 #define BCOND  2
 
-typedef enum { arithmeticDPIt, wideMoveDPIt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt } instruction_t;
+typedef enum { arithmeticDPIt, wideMoveDPIt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdt, ll } instruction_t;
 typedef enum { add, adds, sub, subs } arithmeticDPI_t;
 typedef enum { and, orr, eor, ands} logicDPR_t;
 typedef enum { bic, orn, eon, bics} logicDPRN_t;
@@ -230,6 +233,21 @@ typedef struct {
   uint64_t cond;
 } bcond;
 
+typedef struct {
+  bool sf;
+  bool u;
+  bool l;
+  uint32_t offset;
+  uint64_t* Xn;
+  uint64_t* Rt;
+} SDT;
+
+typedef struct {
+  bool sf;
+  uint32_t simm19;
+  uint64_t Rt;
+} LL;
+
 typedef union {
     arithmeticDPI arithmeticDpi;
     wideMoveDPI wideMoveDpi;
@@ -238,6 +256,8 @@ typedef union {
     branch branch;
     breg breg;
     bcond bcond;
+    SDT sdt;
+    LL ll;
     instruction_t itype;
 } instruction;
 
@@ -307,6 +327,25 @@ instruction decodeBcond(uint32_t i) {
   return instr;
 }
 
+instruction decodeSDT(uint32_t i) {
+  instruction instr = { .itype = sdt };
+  instr.sdt.sf = SFt(i);
+  instr.sdt.u  = U(i);
+  instr.sdt.l  = L(i);
+  instr.sdt.offset = OP2(i);
+  instr.sdt.Xn = state.R + XN(i);
+  instr.sdt.Rt = state.R + RD(i);
+  return instr;
+}
+
+instruction decodeLL(uint32_t i) {
+  instruction instr = { .itype = ll };
+  instr.ll.sf = SFt(i);
+  instr.ll.Rt = RD(i);
+  instr.ll.simm19 = SI19(i);
+  return instr;
+}
+
 instruction decodeDPI(uint32_t i) {
     uint8_t opi = OPI(i);
     switch (opi) {
@@ -330,7 +369,13 @@ instruction decodeDPR(uint32_t i) {
   exit(1);
 }
 
-instruction decodeLS(uint32_t i) {}
+instruction decodeLS(uint32_t i) {
+  if (SF(i)) {
+    return decodeSDT(i);
+  } else {
+    return decodeLL(i);
+  }
+}
 
 instruction decodeB(uint32_t i) {
   int branch_t = BT(i);
@@ -432,6 +477,14 @@ void executeBcond(instruction i) {
   
 }
 
+void executeSDT(instruction i) {
+
+}
+
+void executeLL(instruction i) {
+  
+}
+
 void execute(instruction i) {
   switch (i.itype) {
     case (arithmeticDPIt):
@@ -448,6 +501,10 @@ void execute(instruction i) {
       executeBreg(i);
     case (bcondt):
       executeBcond(i);
+    case (sdt):
+      executeSDT(i);
+    case (ll):
+      executeLL(i);
   }
 }
 
