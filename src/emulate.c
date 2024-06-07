@@ -319,6 +319,12 @@ void condBranch(uint64_t offset, uint64_t cond) {
   }
 }
 
+//Function for halt 1.9
+
+int halt() {
+  exit(0);
+}
+
 int main(int argc, char **argv) {
   // validate input arguments
   if (argc > 3 || argc < 2) { 
