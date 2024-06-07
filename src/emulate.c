@@ -275,7 +275,7 @@ void regmSub(uint64_t *rd, uint64_t *ra, uint64_t *rn, uint64_t *rm) {
 }
 
 
-// Fucntions relating to bitwise shifts (1.6)
+// Functions relating to bitwise shifts (1.6)
 
 uint64_t lsl32(uint64_t rn, int shift_amount) {
   uint32_t lowerBits = (uint32_t) (rn & 0xFFFFFFFF);
