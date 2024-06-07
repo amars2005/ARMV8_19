@@ -38,3 +38,6 @@ assemble
 .vscode
 build
 .cbuild
+cmake-build-debug
+.idea
+*.txt
