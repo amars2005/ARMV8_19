@@ -95,6 +95,11 @@ static void setup(void) {
 #define VALUE_STR_LENGTH 16
 #define LINE_STR_LENGTH 50
 
+// returns the bits [start, end] of i
+static uint64_t bits(uint64_t i, int start, int end) {
+    return (((i) >> (start)) & (uint32_t) pow(2, (end) - (start) + 1) - 1);
+}
+
 char* valueToStr(char* valueAsStr, uint64_t value) {
   sprintf(valueAsStr, "%lx", value); //creates the value as a string
 
@@ -180,19 +185,19 @@ static void loadfile(char fileName[]) {
 
 // Functions for data processing instructions using immediate addressing (1.4)
 
-void immAdd(uint64_t *rd, uint64_t *rn, uint64_t *imm12, bool w) {
+void immAdd(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool w) {
   // Bitwise ADD on the values pointed to by rn and imm12
   *rd = *rn + *imm12;
 } 
 
-void immAddFlags(uint64_t *rd, uint64_t *rn, uint64_t *imm12, bool z) {
+void immAddFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
   // Bitwise ADD on the values pointed to by rn and imm12
-  int result = *rn + *imm12;
+  uint64_t result = *rn + *imm12;
   *rd = result;
 
   int bits;
-  if (!z) { int bits = 32; }
-  else { int bits = 64; }
+  if (!z) { bits = 32; }
+  else { bits = 64; }
 
   (state.PSTATE).N = (result >> (bits - 1));
   if (result == 0) { (state.PSTATE).Z = 1; }
@@ -200,19 +205,19 @@ void immAddFlags(uint64_t *rd, uint64_t *rn, uint64_t *imm12, bool z) {
   if (result > (2 << (bits - 1))) { (state.PSTATE).V = 1; }
 }
 
-void immSub(uint64_t *rd, uint64_t *rn, uint64_t *imm12, bool w) {
+void immSub(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool w) {
   // Bitwise SUB on the values pointed to by rn and imm12
   *rd = *rn - *imm12;
 } 
 
-void immSubFlags(uint64_t *rd, uint64_t *rn, uint64_t *imm12, bool z) {
+void immSubFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
   // Bitwise SUB on the values pointed to by rn and imm12
-  int result = *rn - *imm12;
+  uint64_t result = *rn - *imm12;
   *rd = result;
   
   int bits;
-  if (!z) { int bits = 32; }
-  else { int bits = 64; }
+  if (!z) { bits = 32; }
+  else { bits = 64; }
 
   (state.PSTATE).N = (result >> (bits - 1));
   if (result == 0) { (state.PSTATE).Z = 1; }
@@ -220,57 +225,57 @@ void immSubFlags(uint64_t *rd, uint64_t *rn, uint64_t *imm12, bool z) {
   if (result > (2 << (bits - 1))) { (state.PSTATE).V = 1; }
 }
 
-void wMovN(uint64_t *rd, uint64_t *hw, uint64_t *imm16, bool z) {
+void wMovN(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
   //Sets the value in rd to the bitwise negation of imm16
   int bits;
-  if (!z) { int bits = 32; }
-  else { int bits = 64; }
+  if (!z) { bits = 32; }
+  else { bits = 64; }
 
-  *rd = (2 << bits) + imm16 - (2 << (int) hw);
+  *rd = (2 << bits) + (*imm16) - (2 << (*hw));
 }
 
-void wMovZ(uint64_t *rd, uint64_t *hw, uint64_t *imm16, bool z) {
+void wMovZ(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
   //Sets the value in rd to imm16
   *rd = *imm16;
 }
 
-void wMovK(uint64_t *rd, uint64_t *hw, uint64_t *imm16, bool z) {
+void wMovK(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
   //Inserts the value of imm16 into rd, keeping all the other bits the same.
-  int bits;
-  if (!z) { int bits = 32; }
-  else { int bits = 64; }
+//  int bits;
+//  if (!z) { bits = 32; }
+//  else { bits = 64; }
 
   *rd = *rd - bits(*rd, *hw, *hw + 15) + (*imm16 * 2 << *hw);
 }
 
 // Functions for data processing instructions with registers (1.5)
 
-void regAnd(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regAnd(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // Bitwise AND on the values pointed to by rn and op2
   *rd = *rn & *op2;
 } 
 
-void regClear(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regClear(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // BIC is the same as AND with the complement of the second operand
   *rd = *rn & ~(*op2);
 }
 
-void regOr(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regOr(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // Bitwise OR on the values pointed to by rn and op2
   *rd = *rn | *op2;
 }
 
-void regOrn(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regOrn(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // Bitwise OR with the complement of the second operand
   *rd = *rn | ~(*op2);
 }
 
-void regXor(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regXor(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // Bitwise XOR on the values pointed to by rn and op2
   *rd = *rn ^ *op2;
 }
 
-void regXorn(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regXorn(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // Bitwise XOR with the complement of the second operand
   *rd = *rn ^ ~(*op2);
 }
@@ -286,26 +291,26 @@ void updateFlags(uint64_t result) {
   state.PSTATE.V = 0;
 }
 
-void regAndFlags(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regAndFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // Bitwise AND on the values pointed to by rn and op2
   uint64_t result = *rn & *op2;
   *rd = result;
   updateFlags(result);
 } 
 
-void regClearFlags(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regClearFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // Bitwise BIC on rn and op2
   uint64_t result = *rn & ~(*op2);
   *rd = result;
   updateFlags(result);
 } 
 
-void regmAdd(uint64_t *rd, uint64_t *ra, uint64_t *rn, uint64_t *rm) {
+void regmAdd(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm) {
   // Perform an mAdd on the values stored in ra, rn and rm
   *rd = *ra + ((*rn) * (*rm));
 }
 
-void regmSub(uint64_t *rd, uint64_t *ra, uint64_t *rn, uint64_t *rm) {
+void regmSub(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm) {
   // Perform an mSub on the values stored in ra, rn and rm
   *rd = *ra - ((*rn) * (*rm));
 }
@@ -562,11 +567,6 @@ int halt() {
 //FETCH-DECODE part
 ///////////////////
 
-// returns the bits [start, end] of i
-static uint64_t bits(uint64_t i, int start, int end) {
-  return (((i) >> (start)) & (uint32_t) pow(2, (end) - (start) + 1) - 1);
-}
-
 static uint32_t fetch(void) {
     uint8_t* ci = state.memory + state.PC; // address of next instruction in memory
     return (ci[0] + (ci[1] << 8) + (ci[2] << 16)); // convert 3 little endian bytes to 32 bit int
@@ -682,7 +682,7 @@ instruction decodeLogicDPR(uint32_t i) {
   instr.logicDpr.Rd  = state.R + RD(i);
   instr.logicDpr.Rn  = state.R + RN(i); 
   instr.logicDpr.opc = OPC(i);
-  //check for 11111 which represets ZR
+  //check for 11111 which represents ZR
   if (instr.logicDpr.Op2 == (uint64_t*) 63) { instr.logicDpr.Op2 =  (uint64_t* const) &state.ZR; }
   if (instr.logicDpr.Rn  == (uint64_t*) 63) { instr.logicDpr.Rn  =  (uint64_t* const) &state.ZR; }
   return instr;
@@ -801,7 +801,7 @@ instruction decode(uint32_t i) {
 ////////////////
 
 void executeArithmeticDPI(instruction i) {
-    void (*func)(uint64_t*, uint64_t*, uint64_t*, bool);
+    void (*func)(uint64_t*, const uint64_t*, const uint64_t*, bool);
   switch (i.arithmeticDpi.opc) {
     case (add):
         func = &immAdd;
@@ -820,7 +820,7 @@ void executeArithmeticDPI(instruction i) {
 }
 
 void executeWideMoveDPI(instruction i) {
-    void (*func)(uint64_t *rd, uint64_t *hw, uint64_t *imm16, bool z);
+    void (*func)(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, const bool z);
   switch (i.wideMoveDpi.opc) {
     case (movn):
         func = &wMovN;
@@ -836,7 +836,7 @@ void executeWideMoveDPI(instruction i) {
 }
 
 void executeLogicDPR(instruction i) {
-    void (*func)(uint64_t *rd, uint64_t *rn, uint64_t *op2);
+    void (*func)(uint64_t *rd, const uint64_t *rn, const uint64_t *op2);
   if (i.logicDpr.N) {
     switch (i.logicDpr.opc) {
       case (bic):
@@ -872,7 +872,7 @@ void executeLogicDPR(instruction i) {
 }
 
 void executeMultiplyDPR(instruction i) {
-    void (*func)(uint64_t *rd, uint64_t *ra, uint64_t *rn, uint64_t *rm);
+    void (*func)(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm);
   if (i.multiplyDpr.X) {
     func = &regmSub;
   } else {
