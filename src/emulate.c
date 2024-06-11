@@ -50,10 +50,13 @@ call example: ./emulate <file_in>            - output to stdout
 #define U(i)     bits(i,24,24)
 #define SFt(i)   bits(i,30,30)
 #define HW(i)    bits(i,21,22)
+#define IMM16(i) bits(i,5,20)
 
 #define BRANCH 0
 #define BREG   6
 #define BCOND  2
+
+#define HALT   0x8a000000
 
 typedef enum { arithmeticDPIt, wideMoveDPIt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdt, ll } instruction_t;
 typedef enum { add, adds, sub, subs } arithmeticDPI_t;
@@ -97,7 +100,7 @@ static void setup(void) {
 
 // returns the bits [start, end] of i
 static uint64_t bits(uint64_t i, int start, int end) {
-    return (((i) >> (start)) & (uint32_t) pow(2, (end) - (start) + 1) - 1);
+    return (((i) >> (start)) & ((uint32_t) pow(2, (end) - (start) + 1) - 1));
 }
 
 char* valueToStr(char* valueAsStr, uint64_t value) {
@@ -237,6 +240,7 @@ void wMovN(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
 void wMovZ(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
   //Sets the value in rd to imm16
   *rd = *imm16;
+    fprintf(stderr, "rd is %lu\n", *rd);
 }
 
 void wMovK(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
@@ -398,13 +402,15 @@ uint64_t bitwiseShift(uint64_t rn, int mode, int instruction, int shift_amount) 
       case 1: return lsr32(rn, shift_amount);
       case 2: return asr32(rn, shift_amount);
       case 3: return ror32(rn, shift_amount);
+      default: exit(1);
     }
   } else {
     switch (instruction) {
       case 0: return lsl64(rn, shift_amount); 
       case 1: return lsr64(rn, shift_amount); 
       case 2: return asr64(rn, shift_amount); 
-      case 3: return ror64(rn, shift_amount); 
+      case 3: return ror64(rn, shift_amount);
+        default: exit(1);
     }
   }
 }
@@ -569,7 +575,7 @@ int halt() {
 
 static uint32_t fetch(void) {
     uint8_t* ci = state.memory + state.PC; // address of next instruction in memory
-    return (ci[0] + (ci[1] << 8) + (ci[2] << 16)); // convert 3 little endian bytes to 32 bit int
+    return (ci[0] + (ci[1] << 8) + (ci[2] << 16) + (ci[3] << 24)); // convert 4 little endian bytes to 32 bit int
 }
 
 // Structs representing different instruction types
@@ -664,14 +670,14 @@ instruction decodeWideMoveDPI(uint32_t i) {
   instruction instr     = { .itype = wideMoveDPIt };
   instr.wideMoveDpi.Rd  = state.R + RD(i);
   instr.wideMoveDpi.hw  = HW(i);
-  instr.wideMoveDpi.Op  = OP2(i);
+  instr.wideMoveDpi.Op  = IMM16(i);
   instr.wideMoveDpi.sf  = SF(i);
   instr.wideMoveDpi.opc = OPC(i);
   return instr;
 }
 
 instruction decodeArithmeticDPR(uint32_t i) {
-  instruction instr;
+  instruction instr = { .itype = arithmeticDPIt };
   return instr;
 }
 
@@ -746,7 +752,7 @@ instruction decodeDPI(uint32_t i) {
         case 5: // opi: 101
             return decodeWideMoveDPI(i);
         default:
-            fprintf(stderr, "Unsupported operation");
+            fprintf(stderr, "Unsupported operation in DPI");
             exit(1);
     };
 }
@@ -757,7 +763,7 @@ instruction decodeDPR(uint32_t i) {
   if (M == 0 && (opr & 9) == 8) { return decodeArithmeticDPR(i); } // opr: 1xx0
   if (M == 0 && (opr & 8) == 0) { return decodeLogicDPR(i); }      // opr: 0xxx
   if (M == 1 && opr       == 8) { return decodeMultiplyDPR(i); }   // opr: 1000
-  fprintf(stderr, "Unknown operation");
+  fprintf(stderr, "Unknown operation in DPR");
   exit(1);
 }
 
@@ -788,12 +794,14 @@ instruction decodeB(uint32_t i) {
 // Main decode function
 instruction decode(uint32_t i) {
     uint8_t op0 = OP0(i);
-    if ((op0 >> 1) == 3) { return decodeDPI(i); } // op0: 100x
+    if ((op0 >> 1) == 4) { return decodeDPI(i); } // op0: 100x
     if ((op0 & 7)  == 5) { return decodeDPR(i); } // op0: x101
     if ((op0 & 5)  == 4) { return decodeLS(i);  } // op0: x1x0
     if ((op0 >> 1) == 5) { return decodeB(i);   } // op0: 101x
-    fprintf(stderr, "Unknown operation");
-    exit(1);
+    else {
+        fprintf(stderr, "Unknown operation in decode: op0 is %d, i is %d", op0, i);
+        exit(1);
+    }
 }
 
 ////////////////
@@ -905,23 +913,36 @@ void execute(instruction i) {
   switch (i.itype) {
     case (arithmeticDPIt):
       executeArithmeticDPI(i);
+      break;
     case (wideMoveDPIt):
       executeWideMoveDPI(i);
+      break;
     case (logicDPRt):
       executeLogicDPR(i);
+      break;
     case (multiplyDPRt):
       executeMultiplyDPR(i);
+          break;
     case (brancht):
       executeBranch(i);
+          break;
     case (bregt):
       executeBreg(i);
+          break;
     case (bcondt):
       executeBcond(i);
+          break;
     case (sdt):
       executeSDT(i);
+          break;
     case (ll):
       executeLL(i);
+          break;
   }
+  if (i.itype != brancht && i.itype != bcondt && i.itype != bregt) {
+      state.PC += 4;
+  }
+    //fprintf(stderr, "good\n");
 }
 
 int main(int argc, char **argv) {
@@ -934,6 +955,30 @@ int main(int argc, char **argv) {
   setup();
 
   loadfile(argv[1]);
+
+  uint32_t i = fetch();
+  fprintf(stderr,"%ud\n", i);
+  instruction d;
+  while (i != HALT) {
+      d = decode(i);
+      execute(d);
+      fprintf(stderr, "r is %lu\n", *d.wideMoveDpi.Rd);
+      i = fetch();
+      fprintf(stderr,"%ud\n", i);
+  }
+
+  FILE* out;
+  if (argc == 3) {
+      out = fopen(argv[2], "w");
+      if (out == NULL) {
+          fprintf(stderr, "Output file not found\n");
+          exit(1);
+      }
+  } else {
+      out = stdout;
+  }
+  char outstr[1000];
+  outputFile(outstr);
 
   return EXIT_SUCCESS;
 }
