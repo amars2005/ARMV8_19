@@ -240,7 +240,6 @@ void wMovN(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
 void wMovZ(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
   //Sets the value in rd to imm16
   *rd = *imm16;
-    fprintf(stderr, "rd is %lu\n", *rd);
 }
 
 void wMovK(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
@@ -942,7 +941,6 @@ void execute(instruction i) {
   if (i.itype != brancht && i.itype != bcondt && i.itype != bregt) {
       state.PC += 4;
   }
-    //fprintf(stderr, "good\n");
 }
 
 int main(int argc, char **argv) {
@@ -950,22 +948,24 @@ int main(int argc, char **argv) {
   if (argc > 3 || argc < 2) { 
     fprintf(stderr, "Usage: emulate <file_in> [<file_out>]\n");
     exit(1);
-  } 
-  
+  }
+
   setup();
 
   loadfile(argv[1]);
 
   uint32_t i = fetch();
-  fprintf(stderr,"%ud\n", i);
+  fprintf(stderr,"cir is %ud\n", i);
   instruction d;
   while (i != HALT) {
       d = decode(i);
       execute(d);
-      fprintf(stderr, "r is %lu\n", *d.wideMoveDpi.Rd);
+      fprintf(stderr, "good\n");
       i = fetch();
-      fprintf(stderr,"%ud\n", i);
+      fprintf(stderr,"cir is %ud\n", i);
+      fprintf(stderr, "halt cond %d\n", i == HALT);
   }
+    fprintf(stderr, "goo");
 
   FILE* out;
   if (argc == 3) {
@@ -979,6 +979,7 @@ int main(int argc, char **argv) {
   }
   char outstr[1000];
   outputFile(outstr);
+    fprintf(stderr, "%s", outstr);
 
   return EXIT_SUCCESS;
 }
