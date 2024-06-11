@@ -49,6 +49,7 @@ call example: ./emulate <file_in>            - output to stdout
 #define L(i)     bits(i,22,22)
 #define U(i)     bits(i,24,24)
 #define SFt(i)   bits(i,30,30)
+#define HW(i)    bits(i,21,22)
 
 #define BRANCH 0
 #define BREG   6
@@ -184,7 +185,7 @@ void immAdd(uint64_t *rd, uint64_t *rn, uint64_t *imm12, bool w) {
   *rd = *rn + *imm12;
 } 
 
-void immAddFlags(uint64_t *rd, uint64_t *rn, uint64_t *imm12, PSTATE *pstate, bool z) {
+void immAddFlags(uint64_t *rd, uint64_t *rn, uint64_t *imm12, bool z) {
   // Bitwise ADD on the values pointed to by rn and imm12
   int result = *rn + *imm12;
   *rd = result;
@@ -193,18 +194,18 @@ void immAddFlags(uint64_t *rd, uint64_t *rn, uint64_t *imm12, PSTATE *pstate, bo
   if (!z) { int bits = 32; }
   else { int bits = 64; }
 
-  (*pstate).N = (result >> (bits - 1));
-  if (result == 0) { (*pstate).Z = 1; }
-  if (result > (2 << bits)) { (*pstate).C = 1; }
-  if (result > (2 << (bits - 1))) { (*pstate).V = 1; }
+  (state.PSTATE).N = (result >> (bits - 1));
+  if (result == 0) { (state.PSTATE).Z = 1; }
+  if (result > (2 << bits)) { (state.PSTATE).C = 1; }
+  if (result > (2 << (bits - 1))) { (state.PSTATE).V = 1; }
 }
 
-void immSub(uint64_t *rd, uint64_t *rn, uint64_t *imm12) {
+void immSub(uint64_t *rd, uint64_t *rn, uint64_t *imm12, bool w) {
   // Bitwise SUB on the values pointed to by rn and imm12
   *rd = *rn - *imm12;
 } 
 
-void immSubFlags(uint64_t *rd, uint64_t *rn, uint64_t *imm12, PSTATE *pstate, bool z) {
+void immSubFlags(uint64_t *rd, uint64_t *rn, uint64_t *imm12, bool z) {
   // Bitwise SUB on the values pointed to by rn and imm12
   int result = *rn - *imm12;
   *rd = result;
@@ -213,10 +214,10 @@ void immSubFlags(uint64_t *rd, uint64_t *rn, uint64_t *imm12, PSTATE *pstate, bo
   if (!z) { int bits = 32; }
   else { int bits = 64; }
 
-  (*pstate).N = (result >> (bits - 1));
-  if (result == 0) { (*pstate).Z = 1; }
-  if ((*pstate).N) { (*pstate).C = 1; }
-  if (result > (2 << (bits - 1))) { (*pstate).V = 1; }
+  (state.PSTATE).N = (result >> (bits - 1));
+  if (result == 0) { (state.PSTATE).Z = 1; }
+  if ((state.PSTATE).N) { (state.PSTATE).C = 1; }
+  if (result > (2 << (bits - 1))) { (state.PSTATE).V = 1; }
 }
 
 void wMovN(uint64_t *rd, uint64_t *hw, uint64_t *imm16, bool z) {
@@ -228,7 +229,7 @@ void wMovN(uint64_t *rd, uint64_t *hw, uint64_t *imm16, bool z) {
   *rd = (2 << bits) + imm16 - (2 << (int) hw);
 }
 
-void wMovZ(uint64_t *rd, uint64_t *imm16) {
+void wMovZ(uint64_t *rd, uint64_t *hw, uint64_t *imm16, bool z) {
   //Sets the value in rd to imm16
   *rd = *imm16;
 }
@@ -390,7 +391,7 @@ uint64_t bitwiseShift(uint64_t rn, int mode, int instruction, int shift_amount) 
     switch (instruction) {
       case 0: return lsl32(rn, shift_amount);
       case 1: return lsr32(rn, shift_amount);
-      case 2: return asr32(rn, shift_amount); 
+      case 2: return asr32(rn, shift_amount);
       case 3: return ror32(rn, shift_amount);
     }
   } else {
@@ -499,9 +500,9 @@ void singleDataTransfer(uint8_t sf, uint8_t U, uint8_t L, uint64_t offset, uint6
   }
 }
 
-void loadLiteral(uint8_t sf, uint64_t simm19, uint64_t *PC, uint64_t *rt) {
+void loadLiteral(uint8_t sf, uint64_t simm19, uint64_t *rt) {
   uint8_t memory[MEM_SIZE >> 10];
-  uint64_t transferAddr = *PC + (simm19 << 2);
+  uint64_t transferAddr = state.PC + (simm19 << 2);
   load(rt, sf, transferAddr, memory);
 }
 
@@ -571,24 +572,25 @@ static uint32_t fetch(void) {
     return (ci[0] + (ci[1] << 8) + (ci[2] << 16)); // convert 3 little endian bytes to 32 bit int
 }
 
-extern uint64_t bitwiseShift(uint64_t rn, int mode, int instruction, int shift_amount);
-
+// Structs representing different instruction types
 typedef struct {
   bool      sf;
   uint64_t* Rd;
   uint64_t* Rn;
-  uint32_t  Op2;
+  uint64_t  Op2;
   uint64_t  opc;
 } arithmeticDPI;
 
 typedef struct {
   bool      sf;
+  uint64_t  hw;
   uint64_t* Rd;
-  uint16_t  Op;
+  uint64_t  Op;
   uint64_t opc;
 } wideMoveDPI;
 
 typedef struct {
+  bool      sf;
   uint64_t* Rd;
   uint64_t* Rn;
   uint64_t* Op2;
@@ -602,6 +604,7 @@ typedef struct {
   uint64_t* Rd;
   uint64_t* Rn;
   uint64_t* Ra;
+  uint64_t* Rm;
 } multiplyDPR;
 
 typedef struct {
@@ -629,7 +632,7 @@ typedef struct {
 typedef struct {
   bool sf;
   uint32_t simm19;
-  uint64_t Rt;
+  uint64_t* Rt;
 } LL;
 
 typedef union {
@@ -645,6 +648,7 @@ typedef union {
     instruction_t itype;
 } instruction;
 
+// Function decoding each instruction type
 instruction decodeArithmeticDPI(uint32_t i) {
   instruction instr       = { .itype = arithmeticDPIt };
   instr.arithmeticDpi.sf  = SF(i);
@@ -659,6 +663,7 @@ instruction decodeArithmeticDPI(uint32_t i) {
 instruction decodeWideMoveDPI(uint32_t i) {
   instruction instr     = { .itype = wideMoveDPIt };
   instr.wideMoveDpi.Rd  = state.R + RD(i);
+  instr.wideMoveDpi.hw  = HW(i);
   instr.wideMoveDpi.Op  = OP2(i);
   instr.wideMoveDpi.sf  = SF(i);
   instr.wideMoveDpi.opc = OPC(i);
@@ -672,6 +677,7 @@ instruction decodeArithmeticDPR(uint32_t i) {
 
 instruction decodeLogicDPR(uint32_t i) {
   instruction instr  = { .itype = logicDPRt };
+  instr.logicDpr.sf  = SF(i);
   instr.logicDpr.Op2 = state.R + bitwiseShift(RM(i), SF(i), SHIFT(i), SH_OP(i));
   instr.logicDpr.Rd  = state.R + RD(i);
   instr.logicDpr.Rn  = state.R + RN(i); 
@@ -688,6 +694,7 @@ instruction decodeMultiplyDPR(uint32_t i) {
   instr.multiplyDpr.Rd = state.R + RD(i);
   instr.multiplyDpr.Rn = state.R + RN(i);
   instr.multiplyDpr.Ra = state.R + RA(i);
+  instr.multiplyDpr.Rm = state.R + RM(i);
   instr.multiplyDpr.X  = X(i);
   return instr;
 }
@@ -725,11 +732,12 @@ instruction decodeSDT(uint32_t i) {
 instruction decodeLL(uint32_t i) {
   instruction instr = { .itype = ll };
   instr.ll.sf = SFt(i);
-  instr.ll.Rt = RD(i);
+  instr.ll.Rt = state.R + RD(i);
   instr.ll.simm19 = SI19(i);
   return instr;
 }
 
+// Decode flow functions
 instruction decodeDPI(uint32_t i) {
     uint8_t opi = OPI(i);
     switch (opi) {
@@ -777,6 +785,7 @@ instruction decodeB(uint32_t i) {
   }
 }
 
+// Main decode function
 instruction decode(uint32_t i) {
     uint8_t op0 = OP0(i);
     if ((op0 >> 1) == 3) { return decodeDPI(i); } // op0: 100x
@@ -792,81 +801,104 @@ instruction decode(uint32_t i) {
 ////////////////
 
 void executeArithmeticDPI(instruction i) {
+    void (*func)(uint64_t*, uint64_t*, uint64_t*, bool);
   switch (i.arithmeticDpi.opc) {
     case (add):
-      break;
+        func = &immAdd;
+        break;
     case (adds):
-      break;
+        func = &immAddFlags;
+        break;
     case (sub):
-      break;
+        func = &immSub;
+        break;
     case (subs):
-      break;
+        func = &immSubFlags;
+        break;
   }
+    (*func)(i.arithmeticDpi.Rd, i.arithmeticDpi.Rn, &i.arithmeticDpi.Op2, i.arithmeticDpi.sf);
 }
 
 void executeWideMoveDPI(instruction i) {
+    void (*func)(uint64_t *rd, uint64_t *hw, uint64_t *imm16, bool z);
   switch (i.wideMoveDpi.opc) {
     case (movn):
-      break;
+        func = &wMovN;
+        break;
     case (movz):
-      break;
+        func = &wMovZ;
+        break;
     case (movk):
-      break;
+        func = &wMovK;
+        break;
   }
+    (*func)(i.wideMoveDpi.Rd, &i.wideMoveDpi.hw, &i.wideMoveDpi.Op, i.arithmeticDpi.sf);
 }
 
 void executeLogicDPR(instruction i) {
+    void (*func)(uint64_t *rd, uint64_t *rn, uint64_t *op2);
   if (i.logicDpr.N) {
     switch (i.logicDpr.opc) {
       case (bic):
+          func = &regClear;
         break;
       case (orn):
+          func = &regOrn;
         break;
       case (eon):
+          func = &regXorn;
         break;
       case (bics):
+          func = &regClearFlags;
         break;
     }
   } else {
     switch (i.logicDpr.opc) {
       case (and):
+          func = &regAnd;
         break;
       case (orr):
+          func = &regOr;
         break;
       case (eor):
+          func = &regXor;
         break;
       case (ands):
+          func = &regAndFlags;
         break;
     }
   }
+    (*func)(i.logicDpr.Rd, i.logicDpr.Rn, i.logicDpr.Op2);
 }
 
 void executeMultiplyDPR(instruction i) {
+    void (*func)(uint64_t *rd, uint64_t *ra, uint64_t *rn, uint64_t *rm);
   if (i.multiplyDpr.X) {
-    
+    func = &regmSub;
   } else {
-
+    func = &regmAdd;
   }
+    (*func)(i.multiplyDpr.Rd, i.multiplyDpr.Ra, i.multiplyDpr.Rn, i.multiplyDpr.Rm);
 }
 
 void executeBranch(instruction i) {
-
+    unCondBranch(i.branch.offset);
 }
 
 void executeBreg(instruction i) {
-
+    registerBranch(i.breg.Xn);
 }
 
 void executeBcond(instruction i) {
-  
+    condBranch(i.bcond.offset, i.bcond.cond);
 }
 
 void executeSDT(instruction i) {
-
+    singleDataTransfer(i.sdt.sf, i.sdt.u, i.sdt.l, i.sdt.offset, i.sdt.Xn, i.sdt.Rt);
 }
 
 void executeLL(instruction i) {
-  
+    loadLiteral(i.ll.sf, i.ll.simm19, i.ll.Rt);
 }
 
 void execute(instruction i) {
