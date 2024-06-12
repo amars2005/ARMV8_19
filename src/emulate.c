@@ -103,27 +103,9 @@ static uint64_t bits(uint64_t i, int start, int end) {
     return (((i) >> (start)) & ((uint32_t) pow(2, (end) - (start) + 1) - 1));
 }
 
-char* valueToStr(char* valueAsStr, uint64_t value) {
-  sprintf(valueAsStr, "%lx", value); //creates the value as a string
-
-  if (strlen(valueAsStr) < VALUE_STR_LENGTH) {
-    int zeroes = VALUE_STR_LENGTH - strlen(valueAsStr);
-    char *zeroString = malloc(VALUE_STR_LENGTH);
-
-    for (int i = 0; i < zeroes; i++) { //adds enough zeroes to make it 16 digits
-      strcat(zeroString, "0");
-    }
-
-    strcat(zeroString, valueAsStr);
-    valueAsStr = zeroString;
-  }
-  return valueAsStr;
-}
-
 void generateLine(uint64_t value, char line[], char outputString[]) {
-  char valueAsStr[VALUE_STR_LENGTH]; //creates a line with the register name
-  char x[16];
-  sprintf(x, "%s", valueToStr(valueAsStr, value));
+  char x[17];
+  sprintf(x, "%016" PRIx64, value);
   strcat(line, x); //adds the value to the line
   strcat(line, "\n");
   strcat(outputString, line); //adds the line to the string
