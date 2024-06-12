@@ -144,7 +144,6 @@ void outputFile(char outputString[]) {
     } else {
       sprintf(line, "X%d = ", i);
     }
-    printf("%s",line);
     generateLine(value, line, outputString);
   }
 
@@ -204,7 +203,7 @@ static void loadfile(char fileName[]) {
 
 // Functions for data processing instructions using immediate addressing (1.4)
 
-void immAdd(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool w) {
+void immAdd(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
   // Bitwise ADD on the values pointed to by rn and imm12
   *rd = *rn + *imm12;
 } 
@@ -224,7 +223,7 @@ void immAddFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z
   if (result > (2 << (bits - 1))) { (state.PSTATE).V = 1; }
 }
 
-void immSub(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool w) {
+void immSub(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
   // Bitwise SUB on the values pointed to by rn and imm12
   *rd = *rn - *imm12;
 } 
@@ -668,6 +667,7 @@ typedef union {
 instruction decodeArithmeticDPI(uint32_t i) {
   instruction instr       = { .itype = arithmeticDPIt };
   instr.arithmeticDpi.sf  = SF(i);
+  instr.itype = arithmeticDPIt;
   instr.arithmeticDpi.Rd  = state.R + RD(i);
   instr.arithmeticDpi.Rn  = state.R + RN(i);
   instr.arithmeticDpi.Op2 = OP2(i);
@@ -679,6 +679,7 @@ instruction decodeArithmeticDPI(uint32_t i) {
 instruction decodeWideMoveDPI(uint32_t i) {
   instruction instr     = { .itype = wideMoveDPIt };
   instr.wideMoveDpi.Rd  = state.R + RD(i);
+  instr.itype = wideMoveDPIt;
   instr.wideMoveDpi.hw  = HW(i);
   instr.wideMoveDpi.Op  = IMM16(i);
   instr.wideMoveDpi.sf  = SF(i);
@@ -694,6 +695,7 @@ instruction decodeArithmeticDPR(uint32_t i) {
 instruction decodeLogicDPR(uint32_t i) {
   instruction instr  = { .itype = logicDPRt };
   instr.logicDpr.sf  = SF(i);
+  instr.itype = logicDPRt;
   instr.logicDpr.Op2 = state.R + bitwiseShift(RM(i), SF(i), SHIFT(i), SH_OP(i));
   instr.logicDpr.Rd  = state.R + RD(i);
   instr.logicDpr.Rn  = state.R + RN(i); 
@@ -707,6 +709,7 @@ instruction decodeLogicDPR(uint32_t i) {
 instruction decodeMultiplyDPR(uint32_t i) {
   instruction instr    = { .itype = multiplyDPRt };
   instr.multiplyDpr.sf = SF(i);
+  instr.itype = multiplyDPRt;
   instr.multiplyDpr.Rd = state.R + RD(i);
   instr.multiplyDpr.Rn = state.R + RN(i);
   instr.multiplyDpr.Ra = state.R + RA(i);
@@ -718,12 +721,14 @@ instruction decodeMultiplyDPR(uint32_t i) {
 instruction decodeBranch(uint32_t i) {
   instruction instr = { .itype = brancht };
   instr.branch.offset = SI26(i) * 4;
+  instr.itype = brancht;
   return instr;
 }
 
 instruction decodeBreg(uint32_t i) {
   instruction instr = { .itype = bregt };
   instr.breg.Xn = (uint64_t*) XN(i);
+  instr.itype = bregt;
   return instr;
 }
 
@@ -731,12 +736,14 @@ instruction decodeBcond(uint32_t i) {
   instruction instr  = { .itype = bcondt };
   instr.bcond.offset = SI19(i) * 4;
   instr.bcond.cond   = COND(i);
+  instr.itype = bcondt;
   return instr;
 }
 
 instruction decodeSDT(uint32_t i) {
   instruction instr = { .itype = sdt };
   instr.sdt.sf = SFt(i);
+  instr.itype = sdt;
   instr.sdt.u  = U(i);
   instr.sdt.l  = L(i);
   instr.sdt.offset = OP2(i);
@@ -748,6 +755,7 @@ instruction decodeSDT(uint32_t i) {
 instruction decodeLL(uint32_t i) {
   instruction instr = { .itype = ll };
   instr.ll.sf = SFt(i);
+  instr.itype = ll;
   instr.ll.Rt = state.R + RD(i);
   instr.ll.simm19 = SI19(i);
   return instr;
@@ -974,23 +982,20 @@ int main(int argc, char **argv) {
   }
 
   FILE* out;
-  //fprintf(stderr, "goon\n");
   if (argc == 3) {
-    //fprintf(stderr, "goob\n");
       out = fopen(argv[2], "w");
-      printf("%s", argv[2]);
       if (out == NULL) {
           fprintf(stdout, "Output file not found\n");
           exit(1);
       }
   } else {
-      //fprintf(stderr, "gooc\n");
       out = stdout;
   }
   
   char outstr[10000];
   outputFile(outstr);
-    fprintf(out, "%s", outstr);
+  fprintf(out, "%s", outstr);
+  fclose(out);
 
   return EXIT_SUCCESS;
 }
