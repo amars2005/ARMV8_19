@@ -58,7 +58,7 @@ call example: ./emulate <file_in>            - output to stdout
 
 #define HALT   0x8a000000
 
-typedef enum { arithmeticDPIt, wideMoveDPIt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdt, ll } instruction_t;
+typedef enum { arithmeticDPIt, wideMoveDPIt, arithmeticDPRt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdt, ll } instruction_t;
 typedef enum { add, adds, sub, subs } arithmeticDPI_t;
 typedef enum { and, orr, eor, ands} logicDPR_t;
 typedef enum { bic, orn, eon, bics} logicDPRN_t;
@@ -590,6 +590,14 @@ typedef struct {
   bool      sf;
   uint64_t* Rd;
   uint64_t* Rn;
+  uint64_t* Rm;
+  uint64_t  opc;
+} arithmeticDPR;
+
+typedef struct {
+  bool      sf;
+  uint64_t* Rd;
+  uint64_t* Rn;
   uint64_t* Op2;
   uint64_t opc;
   bool N;
@@ -635,6 +643,7 @@ typedef struct {
 typedef union {
     arithmeticDPI arithmeticDpi;
     wideMoveDPI wideMoveDpi;
+    arithmeticDPR arithmeticDpr;
     logicDPR logicDpr;
     multiplyDPR multiplyDpr;
     branch branch;
@@ -670,7 +679,13 @@ instruction decodeWideMoveDPI(uint32_t i) {
 }
 
 instruction decodeArithmeticDPR(uint32_t i) {
-  instruction instr = { .itype = arithmeticDPIt };
+  instruction instr = { .itype = arithmeticDPRt };
+  instr.arithmeticDpr.sf = SF(i);
+  instr.arithmeticDpr.Rd = state.R + RD(i);
+  instr.arithmeticDpr.Rn = state.R + RN(i);
+  instr.arithmeticDpr.Rm = state.R + RM(i);
+  instr.arithmeticDpr.opc = OPC(i);
+  instr.itype = arithmeticDPRt;
   return instr;
 }
 
@@ -843,6 +858,25 @@ void executeWideMoveDPI(instruction i) {
     (*func)(i.wideMoveDpi.Rd, &i.wideMoveDpi.hw, &i.wideMoveDpi.Op, i.arithmeticDpi.sf);
 }
 
+void executeArithmeticDPR(instruction i) {
+  void (*func)(uint64_t*, const uint64_t*, const uint64_t*, bool);
+  switch (i.arithmeticDpi.opc) {
+    case (add):
+        func = &immAdd;
+        break;
+    case (adds):
+        func = &immAddFlags;
+        break;
+    case (sub):
+        func = &immSub;
+        break;
+    case (subs):
+        func = &immSubFlags;
+        break;
+  }
+    (*func)(i.arithmeticDpr.Rd, i.arithmeticDpr.Rn, i.arithmeticDpr.Rm, i.arithmeticDpi.sf);
+}
+
 void executeLogicDPR(instruction i) {
     void (*func)(uint64_t *rd, const uint64_t *rn, const uint64_t *op2);
   if (i.logicDpr.N) {
@@ -916,6 +950,9 @@ void execute(instruction i) {
       break;
     case (wideMoveDPIt):
       executeWideMoveDPI(i);
+      break;
+    case (arithmeticDPRt):
+      executeArithmeticDPR(i);
       break;
     case (logicDPRt):
       executeLogicDPR(i);
