@@ -58,7 +58,8 @@ call example: ./emulate <file_in>            - output to stdout
 
 #define HALT   0x8a000000
 
-typedef enum { arithmeticDPIt, wideMoveDPIt, arithmeticDPRt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdt, ll } instruction_t;typedef enum { add, adds, sub, subs } arithmeticDPI_t;
+typedef enum { arithmeticDPIt, wideMoveDPIt, arithmeticDPRt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdt, ll } instruction_t;
+typedef enum { add, adds, sub, subs } arithmeticDPI_t;
 typedef enum { and, orr, eor, ands} logicDPR_t;
 typedef enum { bic, orn, eon, bics} logicDPRN_t;
 
@@ -640,6 +641,7 @@ typedef struct {
 } LL;
 
 typedef union {
+    instruction_t itype;
     arithmeticDPI arithmeticDpi;
     wideMoveDPI wideMoveDpi;
     arithmeticDPR arithmeticDpr;
@@ -650,110 +652,105 @@ typedef union {
     bcond bcond;
     SDT sdt;
     LL ll;
-    instruction_t itype;
+} instrData;
+
+typedef struct {
+  instrData     instruction;
+  instruction_t itype;
 } instruction;
 
 // Function decoding each instruction type
 instruction decodeArithmeticDPI(uint32_t i) {
   instruction instr       = { .itype = arithmeticDPIt };
-  instr.arithmeticDpi.sf  = SF(i);
-  instr.itype = arithmeticDPIt;
-  instr.arithmeticDpi.Rd  = state.R + RD(i);
-  instr.arithmeticDpi.Rn  = state.R + RN(i);
-  instr.arithmeticDpi.Op2 = OP2(i);
-  instr.arithmeticDpi.opc = OPC(i);
-  if (SH(i) == 1) { instr.arithmeticDpi.Op2 <<= 12; } // apply sh flag
+  instr.instruction.arithmeticDpi.sf  = SF(i);
+  instr.instruction.arithmeticDpi.Rd  = state.R + RD(i);
+  instr.instruction.arithmeticDpi.Rn  = state.R + RN(i);
+  instr.instruction.arithmeticDpi.Op2 = OP2(i);
+  instr.instruction.arithmeticDpi.opc = OPC(i);
+  if (SH(i) == 1) { instr.instruction.arithmeticDpi.Op2 <<= 12; } // apply sh flag
   return instr;
 }
 
 instruction decodeWideMoveDPI(uint32_t i) {
   instruction instr     = { .itype = wideMoveDPIt };
-  instr.wideMoveDpi.Rd  = state.R + RD(i);
-  instr.itype = wideMoveDPIt;
-  instr.wideMoveDpi.hw  = HW(i);
-  instr.wideMoveDpi.Op  = IMM16(i);
-  instr.wideMoveDpi.sf  = SF(i);
-  instr.wideMoveDpi.opc = OPC(i);
+  instr.instruction.wideMoveDpi.Rd  = state.R + RD(i);
+  instr.instruction.wideMoveDpi.hw  = HW(i);
+  instr.instruction.wideMoveDpi.Op  = IMM16(i);
+  instr.instruction.wideMoveDpi.sf  = SF(i);
+  instr.instruction.wideMoveDpi.opc = OPC(i);
   return instr;
 }
 
 instruction decodeArithmeticDPR(uint32_t i) {
   instruction instr = { .itype = arithmeticDPRt };
-  instr.arithmeticDpr.sf = SF(i);
-  instr.arithmeticDpr.Rd = state.R + RD(i);
-  instr.arithmeticDpr.Rn = state.R + RN(i);
-  instr.arithmeticDpr.Rm = state.R + RM(i);
-  instr.arithmeticDpr.opc = OPC(i);
+  instr.instruction.arithmeticDpr.sf = SF(i);
+  instr.instruction.arithmeticDpr.Rd = state.R + RD(i);
+  instr.instruction.arithmeticDpr.Rn = state.R + RN(i);
+  instr.instruction.arithmeticDpr.Rm = state.R + RM(i);
+  instr.instruction.arithmeticDpr.opc = OPC(i);
   instr.itype = arithmeticDPRt;
   return instr;
 }
 
 instruction decodeLogicDPR(uint32_t i) {
   instruction instr  = { .itype = logicDPRt };
-  instr.logicDpr.sf  = SF(i);
-  instr.itype = logicDPRt;
-  instr.logicDpr.Op2 = state.R + bitwiseShift(RM(i), SF(i), SHIFT(i), SH_OP(i));
-  instr.logicDpr.Rd  = state.R + RD(i);
-  instr.logicDpr.Rn  = state.R + RN(i); 
-  instr.logicDpr.opc = OPC(i);
+  instr.instruction.logicDpr.sf  = SF(i);
+  instr.instruction.logicDpr.Op2 = state.R + bitwiseShift(RM(i), SF(i), SHIFT(i), SH_OP(i));
+  instr.instruction.logicDpr.Rd  = state.R + RD(i);
+  instr.instruction.logicDpr.Rn  = state.R + RN(i); 
+  instr.instruction.logicDpr.opc = OPC(i);
   //check for 11111 which represents ZR
-  if (instr.logicDpr.Op2 == (uint64_t*) 63) { instr.logicDpr.Op2 =  (uint64_t* const) &state.ZR; }
-  if (instr.logicDpr.Rn  == (uint64_t*) 63) { instr.logicDpr.Rn  =  (uint64_t* const) &state.ZR; }
+  if (instr.instruction.logicDpr.Op2 == (uint64_t*) 63) { instr.instruction.logicDpr.Op2 =  (uint64_t* const) &state.ZR; }
+  if (instr.instruction.logicDpr.Rn  == (uint64_t*) 63) { instr.instruction.logicDpr.Rn  =  (uint64_t* const) &state.ZR; }
   return instr;
 }
 
 instruction decodeMultiplyDPR(uint32_t i) {
   instruction instr    = { .itype = multiplyDPRt };
-  instr.multiplyDpr.sf = SF(i);
-  instr.itype = multiplyDPRt;
-  instr.multiplyDpr.Rd = state.R + RD(i);
-  instr.multiplyDpr.Rn = state.R + RN(i);
-  instr.multiplyDpr.Ra = state.R + RA(i);
-  instr.multiplyDpr.Rm = state.R + RM(i);
-  instr.multiplyDpr.X  = X(i);
+  instr.instruction.multiplyDpr.sf = SF(i);
+  instr.instruction.multiplyDpr.Rd = state.R + RD(i);
+  instr.instruction.multiplyDpr.Rn = state.R + RN(i);
+  instr.instruction.multiplyDpr.Ra = state.R + RA(i);
+  instr.instruction.multiplyDpr.Rm = state.R + RM(i);
+  instr.instruction.multiplyDpr.X  = X(i);
   return instr;
 }
 
 instruction decodeBranch(uint32_t i) {
   instruction instr = { .itype = brancht };
-  instr.branch.offset = SI26(i) * 4;
-  instr.itype = brancht;
+  instr.instruction.branch.offset = SI26(i) * 4;
   return instr;
 }
 
 instruction decodeBreg(uint32_t i) {
   instruction instr = { .itype = bregt };
-  instr.breg.Xn = (uint64_t*) XN(i);
-  instr.itype = bregt;
+  instr.instruction.breg.Xn = (uint64_t*) XN(i);
   return instr;
 }
 
 instruction decodeBcond(uint32_t i) {
   instruction instr  = { .itype = bcondt };
-  instr.bcond.offset = SI19(i) * 4;
-  instr.bcond.cond   = COND(i);
-  instr.itype = bcondt;
+  instr.instruction.bcond.offset = SI19(i) * 4;
+  instr.instruction.bcond.cond   = COND(i);
   return instr;
 }
 
 instruction decodeSDT(uint32_t i) {
   instruction instr = { .itype = sdt };
-  instr.sdt.sf = SFt(i);
-  instr.itype = sdt;
-  instr.sdt.u  = U(i);
-  instr.sdt.l  = L(i);
-  instr.sdt.offset = OP2(i);
-  instr.sdt.Xn = state.R + XN(i);
-  instr.sdt.Rt = state.R + RD(i);
+  instr.instruction.sdt.sf = SFt(i);
+  instr.instruction.sdt.u  = U(i);
+  instr.instruction.sdt.l  = L(i);
+  instr.instruction.sdt.offset = OP2(i);
+  instr.instruction.sdt.Xn = state.R + XN(i);
+  instr.instruction.sdt.Rt = state.R + RD(i);
   return instr;
 }
 
 instruction decodeLL(uint32_t i) {
   instruction instr = { .itype = ll };
-  instr.ll.sf = SFt(i);
-  instr.itype = ll;
-  instr.ll.Rt = state.R + RD(i);
-  instr.ll.simm19 = SI19(i);
+  instr.instruction.ll.sf = SFt(i);
+  instr.instruction.ll.Rt = state.R + RD(i);
+  instr.instruction.ll.simm19 = SI19(i);
   return instr;
 }
 
@@ -824,7 +821,7 @@ instruction decode(uint32_t i) {
 
 void executeArithmeticDPI(instruction i) {
     void (*func)(uint64_t*, const uint64_t*, const uint64_t*, bool);
-  switch (i.arithmeticDpi.opc) {
+  switch (i.instruction.arithmeticDpi.opc) {
     case (add):
         func = &immAdd;
         break;
@@ -838,12 +835,12 @@ void executeArithmeticDPI(instruction i) {
         func = &immSubFlags;
         break;
   }
-    (*func)(i.arithmeticDpi.Rd, i.arithmeticDpi.Rn, &i.arithmeticDpi.Op2, i.arithmeticDpi.sf);
+    (*func)(i.instruction.arithmeticDpi.Rd, i.instruction.arithmeticDpi.Rn, &i.instruction.arithmeticDpi.Op2, i.instruction.arithmeticDpi.sf);
 }
 
 void executeWideMoveDPI(instruction i) {
     void (*func)(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, const bool z);
-  switch (i.wideMoveDpi.opc) {
+  switch (i.instruction.wideMoveDpi.opc) {
     case (movn):
         func = &wMovN;
         break;
@@ -854,7 +851,26 @@ void executeWideMoveDPI(instruction i) {
         func = &wMovK;
         break;
   }
-    (*func)(i.wideMoveDpi.Rd, &i.wideMoveDpi.hw, &i.wideMoveDpi.Op, i.arithmeticDpi.sf);
+    (*func)(i.instruction.wideMoveDpi.Rd, &i.instruction.wideMoveDpi.hw, &i.instruction.wideMoveDpi.Op, i.instruction.arithmeticDpi.sf);
+}
+
+void executeArithmeticDPR(instruction i) {
+  void (*func)(uint64_t*, const uint64_t*, const uint64_t*, bool);
+  switch (i.instruction.arithmeticDpi.opc) {
+    case (add):
+        func = &immAdd;
+        break;
+    case (adds):
+        func = &immAddFlags;
+        break;
+    case (sub):
+        func = &immSub;
+        break;
+    case (subs):
+        func = &immSubFlags;
+        break;
+  }
+    (*func)(i.instruction.arithmeticDpr.Rd, i.instruction.arithmeticDpr.Rn, i.instruction.arithmeticDpr.Rm, i.instruction.arithmeticDpi.sf);
 }
 
 void executeArithmeticDPR(instruction i) {
@@ -878,8 +894,8 @@ void executeArithmeticDPR(instruction i) {
 
 void executeLogicDPR(instruction i) {
     void (*func)(uint64_t *rd, const uint64_t *rn, const uint64_t *op2);
-  if (i.logicDpr.N) {
-    switch (i.logicDpr.opc) {
+  if (i.instruction.logicDpr.N) {
+    switch (i.instruction.logicDpr.opc) {
       case (bic):
           func = &regClear;
         break;
@@ -894,7 +910,7 @@ void executeLogicDPR(instruction i) {
         break;
     }
   } else {
-    switch (i.logicDpr.opc) {
+    switch (i.instruction.logicDpr.opc) {
       case (and):
           func = &regAnd;
         break;
@@ -909,37 +925,37 @@ void executeLogicDPR(instruction i) {
         break;
     }
   }
-    (*func)(i.logicDpr.Rd, i.logicDpr.Rn, i.logicDpr.Op2);
+    (*func)(i.instruction.logicDpr.Rd, i.instruction.logicDpr.Rn, i.instruction.logicDpr.Op2);
 }
 
 void executeMultiplyDPR(instruction i) {
     void (*func)(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm);
-  if (i.multiplyDpr.X) {
+  if (i.instruction.multiplyDpr.X) {
     func = &regmSub;
   } else {
     func = &regmAdd;
   }
-    (*func)(i.multiplyDpr.Rd, i.multiplyDpr.Ra, i.multiplyDpr.Rn, i.multiplyDpr.Rm);
+    (*func)(i.instruction.multiplyDpr.Rd, i.instruction.multiplyDpr.Ra, i.instruction.multiplyDpr.Rn, i.instruction.multiplyDpr.Rm);
 }
 
 void executeBranch(instruction i) {
-    unCondBranch(i.branch.offset);
+    unCondBranch(i.instruction.branch.offset);
 }
 
 void executeBreg(instruction i) {
-    registerBranch(i.breg.Xn);
+    registerBranch(i.instruction.breg.Xn);
 }
 
 void executeBcond(instruction i) {
-    condBranch(i.bcond.offset, i.bcond.cond);
+    condBranch(i.instruction.bcond.offset, i.instruction.bcond.cond);
 }
 
 void executeSDT(instruction i) {
-    singleDataTransfer(i.sdt.sf, i.sdt.u, i.sdt.l, i.sdt.offset, i.sdt.Xn, i.sdt.Rt);
+    singleDataTransfer(i.instruction.sdt.sf, i.instruction.sdt.u, i.instruction.sdt.l, i.instruction.sdt.offset, i.instruction.sdt.Xn, i.instruction.sdt.Rt);
 }
 
 void executeLL(instruction i) {
-    loadLiteral(i.ll.sf, i.ll.simm19, i.ll.Rt);
+    loadLiteral(i.instruction.ll.sf, i.instruction.ll.simm19, i.instruction.ll.Rt);
 }
 
 void execute(instruction i) {
