@@ -955,31 +955,27 @@ int main(int argc, char **argv) {
   loadfile(argv[1]);
 
   uint32_t i = fetch();
-  fprintf(stderr,"cir is %ud\n", i);
   instruction d;
   while (i != HALT) {
       d = decode(i);
       execute(d);
-      fprintf(stderr, "good\n");
       i = fetch();
-      fprintf(stderr,"cir is %ud\n", i);
-      fprintf(stderr, "halt cond %d\n", i == HALT);
   }
-    fprintf(stderr, "goo");
 
   FILE* out;
   if (argc == 3) {
       out = fopen(argv[2], "w");
       if (out == NULL) {
-          fprintf(stderr, "Output file not found\n");
+          fprintf(stdout, "Output file not found\n");
           exit(1);
       }
   } else {
       out = stdout;
   }
-  char outstr[1000];
+  
+  char outstr[10000];
   outputFile(outstr);
-    fprintf(stderr, "%s", outstr);
+    fprintf(out, "%s", outstr);
 
   return EXIT_SUCCESS;
 }
