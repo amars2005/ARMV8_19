@@ -856,7 +856,7 @@ void executeWideMoveDPI(instruction i) {
 
 void executeArithmeticDPR(instruction i) {
   void (*func)(uint64_t*, const uint64_t*, const uint64_t*, bool);
-  switch (i.instruction.arithmeticDpi.opc) {
+  switch (i.instruction.arithmeticDpr.opc) {
     case (add):
         func = &immAdd;
         break;
@@ -871,25 +871,6 @@ void executeArithmeticDPR(instruction i) {
         break;
   }
     (*func)(i.instruction.arithmeticDpr.Rd, i.instruction.arithmeticDpr.Rn, i.instruction.arithmeticDpr.Rm, i.instruction.arithmeticDpi.sf);
-}
-
-void executeArithmeticDPR(instruction i) {
-  void (*func)(uint64_t*, const uint64_t*, const uint64_t*, bool);
-  switch (i.arithmeticDpi.opc) {
-    case (add):
-        func = &immAdd;
-        break;
-    case (adds):
-        func = &immAddFlags;
-        break;
-    case (sub):
-        func = &immSub;
-        break;
-    case (subs):
-        func = &immSubFlags;
-        break;
-  }
-    (*func)(i.arithmeticDpr.Rd, i.arithmeticDpr.Rn, i.arithmeticDpr.Rm, i.arithmeticDpi.sf);
 }
 
 void executeLogicDPR(instruction i) {
