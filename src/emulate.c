@@ -195,14 +195,14 @@ void immAddFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z
   uint64_t result = *rn + *imm12;
   *rd = result;
 
-  int bits;
-  if (!z) { bits = 32; }
-  else { bits = 64; }
+  int bitNum;
+  if (!z) { bitNum = 32; }
+  else { bitNum = 64; }
 
-  (state.PSTATE).N = (result >> (bits - 1));
-  if (result == 0) { (state.PSTATE).Z = 1; }
-  if (result > (2 << bits)) { (state.PSTATE).C = 1; }
-  if (result > (2 << (bits - 1))) { (state.PSTATE).V = 1; }
+  (state.PSTATE).N = (result >> (bitNum - 1));
+  (state.PSTATE).Z = (result == 0); 
+  (state.PSTATE).C = (result > (1ULL << bitNum)); 
+  (state.PSTATE).V = (result > (1ULL << (bitNum - 1))); 
 }
 
 void immSub(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
@@ -215,14 +215,14 @@ void immSubFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z
   uint64_t result = *rn - *imm12;
   *rd = result;
   
-  int bits;
-  if (!z) { bits = 32; }
-  else { bits = 64; }
+  int bitNum;
+  if (!z) { bitNum = 32; }
+  else { bitNum = 64; }
 
-  (state.PSTATE).N = (result >> (bits - 1));
-  if (result == 0) { (state.PSTATE).Z = 1; }
-  if ((state.PSTATE).N) { (state.PSTATE).C = 1; }
-  if (result > (2 << (bits - 1))) { (state.PSTATE).V = 1; }
+  (state.PSTATE).N = (result >> (bitNum - 1));
+  (state.PSTATE).Z = (result == 0); 
+  (state.PSTATE).C = !(state.PSTATE).N; 
+  (state.PSTATE).V = (*rn > *imm12) && (*rd < *imm12);
 }
 
 void wMovN(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
@@ -871,6 +871,25 @@ void executeArithmeticDPR(instruction i) {
         break;
   }
     (*func)(i.instruction.arithmeticDpr.Rd, i.instruction.arithmeticDpr.Rn, i.instruction.arithmeticDpr.Rm, i.instruction.arithmeticDpi.sf);
+}
+
+void executeArithmeticDPR(instruction i) {
+  void (*func)(uint64_t*, const uint64_t*, const uint64_t*, bool);
+  switch (i.arithmeticDpi.opc) {
+    case (add):
+        func = &immAdd;
+        break;
+    case (adds):
+        func = &immAddFlags;
+        break;
+    case (sub):
+        func = &immSub;
+        break;
+    case (subs):
+        func = &immSubFlags;
+        break;
+  }
+    (*func)(i.arithmeticDpr.Rd, i.arithmeticDpr.Rn, i.arithmeticDpr.Rm, i.arithmeticDpi.sf);
 }
 
 void executeLogicDPR(instruction i) {
