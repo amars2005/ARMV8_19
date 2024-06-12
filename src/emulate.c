@@ -433,72 +433,68 @@ uint64_t bitwiseShift(uint64_t rn, int mode, int instruction, int shift_amount) 
 // Section 1.7 on addressing modes
 
 // Begin with helper function on loading and storing
-void load(uint64_t *rn, uint8_t sf, uint64_t addr, uint8_t *memory) {
+void load(uint64_t *rn, uint8_t sf, uint64_t addr) {
   uint64_t regVal = 0;
   if (sf == 0) {
     for (int i = 0; i < 4; i++) {
-      regVal += memory[addr + i] << (i * 8);
+      regVal += state.memory[addr + i] << (i * 8);
     }
     *rn = regVal;
   } else {
     for (int i = 0; i < 8; i++) {
-      regVal += memory[addr + i] << (i * 8);
+      regVal += state.memory[addr + i] << (i * 8);
     }
     *rn = regVal;
   }
 }
 
-void store(uint64_t *rn, uint8_t sf, uint64_t addr, uint8_t *memory) {
+void store(uint64_t *rn, uint8_t sf, uint64_t addr) {
   uint64_t twoBitMask = 0xFF;
   if (sf == 0) {
     for (int i = 0; i < 4; i++) {
-      memory[addr + i] = (uint8_t) ((*rn >> (i * 8)) & twoBitMask);
+      state.memory[addr + i] = (uint8_t) ((*rn >> (i * 8)) & twoBitMask);
     }
   } else {
     for (int i = 0; i < 8; i++) {
-      memory[addr + i] = (uint8_t) ((*rn >> (i * 8)) & twoBitMask);
+      state.memory[addr + i] = (uint8_t) ((*rn >> (i * 8)) & twoBitMask);
     }
   }
-  load(rn, sf, addr, memory);
+  load(rn, sf, addr);
 }
 
 void unsignedOffset(uint8_t sf, uint64_t *xn, uint64_t imm12, uint8_t L, uint64_t *rt) {
   uint64_t uoffset = imm12 << (2 + sf);
-  uint8_t memory[MEM_SIZE >> 10];
   if (L == 1) {
-    load(rt, sf, *xn + uoffset, memory);
+    load(rt, sf, *xn + uoffset);
   } else {
-    store(rt, sf, *xn + uoffset, memory);
+    store(rt, sf, *xn + uoffset);
   }
 }
 
 void preIndex(uint8_t sf, uint64_t *xn, int64_t simm9, uint8_t L, uint64_t *rt) {
   uint64_t transferAddr = *xn + simm9;
-  uint8_t memory[MEM_SIZE >> 10];
   if (L == 1) {
-    load(rt, sf, transferAddr, memory);
+    load(rt, sf, transferAddr);
   } else {
-    store(rt, sf, transferAddr, memory);
+    store(rt, sf, transferAddr);
   }
   *xn += simm9;
 } 
 
 void postIndex(uint8_t sf, uint64_t *xn, int64_t simm9, uint8_t L, uint64_t *rt) {
-  uint8_t memory[MEM_SIZE >> 10];
   if (L == 1) {
-    load(rt, sf, *xn, memory);
+    load(rt, sf, *xn);
   } else {
-    store(rt, sf, *xn, memory);
+    store(rt, sf, *xn);
   }
   *xn += simm9;
 }
 
 void registerOffset(uint8_t sf, uint64_t *xn, uint64_t *xm, uint8_t L, uint64_t *rt) {
-  uint8_t memory[MEM_SIZE >> 10];
   if (L == 1) {
-    load(rt, sf, *xn + *xm, memory);
+    load(rt, sf, *xn + *xm);
   } else {
-    store(rt, sf, *xn + *xm, memory);
+    store(rt, sf, *xn + *xm);
   }
 }
 
@@ -527,9 +523,8 @@ void singleDataTransfer(uint8_t sf, uint8_t U, uint8_t L, uint64_t offset, uint6
 }
 
 void loadLiteral(uint8_t sf, uint64_t simm19, uint64_t *rt) {
-  uint8_t memory[MEM_SIZE >> 10];
   uint64_t transferAddr = state.PC + (simm19 << 2);
-  load(rt, sf, transferAddr, memory);
+  load(rt, sf, transferAddr);
 }
 
 // Functions for branch instructions (1.8)
@@ -971,17 +966,12 @@ int main(int argc, char **argv) {
   loadfile(argv[1]);
 
   uint32_t i = fetch();
-  //fprintf(stderr,"cir is %ud\n", i);
   instruction d;
   while (i != HALT) {
       d = decode(i);
       execute(d);
-      //fprintf(stderr, "good\n");
       i = fetch();
-      //fprintf(stderr,"cir is %ud\n", i);
-      //fprintf(stderr, "halt cond %d\n", i == HALT);
   }
-    //fprintf(stderr, "goo");
 
   FILE* out;
   //fprintf(stderr, "goon\n");
@@ -990,18 +980,17 @@ int main(int argc, char **argv) {
       out = fopen(argv[2], "w");
       printf("%s", argv[2]);
       if (out == NULL) {
-          //fprintf(stderr, "Output file not found\n");
+          fprintf(stdout, "Output file not found\n");
           exit(1);
       }
   } else {
       //fprintf(stderr, "gooc\n");
       out = stdout;
   }
-  char* outstr = malloc(100000);
-  strcat(outstr, "Registers:\n");
+  
+  char outstr[10000];
   outputFile(outstr);
-  fprintf(out, "%s", outstr);
-  fclose(out);
+    fprintf(out, "%s", outstr);
 
   return EXIT_SUCCESS;
 }
