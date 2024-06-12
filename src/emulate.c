@@ -49,10 +49,14 @@ call example: ./emulate <file_in>            - output to stdout
 #define L(i)     bits(i,22,22)
 #define U(i)     bits(i,24,24)
 #define SFt(i)   bits(i,30,30)
+#define HW(i)    bits(i,21,22)
+#define IMM16(i) bits(i,5,20)
 
 #define BRANCH 0
 #define BREG   6
 #define BCOND  2
+
+#define HALT   0x8a000000
 
 typedef enum { arithmeticDPIt, wideMoveDPIt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdt, ll } instruction_t;
 typedef enum { add, adds, sub, subs } arithmeticDPI_t;
@@ -93,6 +97,11 @@ static void setup(void) {
 
 #define VALUE_STR_LENGTH 16
 #define LINE_STR_LENGTH 50
+
+// returns the bits [start, end] of i
+static uint64_t bits(uint64_t i, int start, int end) {
+    return (((i) >> (start)) & ((uint32_t) pow(2, (end) - (start) + 1) - 1));
+}
 
 char* valueToStr(char* valueAsStr, uint64_t value) {
   sprintf(valueAsStr, "%lx", value); //creates the value as a string
@@ -179,97 +188,97 @@ static void loadfile(char fileName[]) {
 
 // Functions for data processing instructions using immediate addressing (1.4)
 
-void immAdd(uint64_t *rd, uint64_t *rn, uint64_t *imm12, bool w) {
+void immAdd(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool w) {
   // Bitwise ADD on the values pointed to by rn and imm12
   *rd = *rn + *imm12;
 } 
 
-void immAddFlags(uint64_t *rd, uint64_t *rn, uint64_t *imm12, PSTATE *pstate, bool z) {
+void immAddFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
   // Bitwise ADD on the values pointed to by rn and imm12
-  int result = *rn + *imm12;
+  uint64_t result = *rn + *imm12;
   *rd = result;
 
   int bits;
-  if (!z) { int bits = 32; }
-  else { int bits = 64; }
+  if (!z) { bits = 32; }
+  else { bits = 64; }
 
-  (*pstate).N = (result >> (bits - 1));
-  if (result == 0) { (*pstate).Z = 1; }
-  if (result > (2 << bits)) { (*pstate).C = 1; }
-  if (result > (2 << (bits - 1))) { (*pstate).V = 1; }
+  (state.PSTATE).N = (result >> (bits - 1));
+  if (result == 0) { (state.PSTATE).Z = 1; }
+  if (result > (2 << bits)) { (state.PSTATE).C = 1; }
+  if (result > (2 << (bits - 1))) { (state.PSTATE).V = 1; }
 }
 
-void immSub(uint64_t *rd, uint64_t *rn, uint64_t *imm12) {
+void immSub(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool w) {
   // Bitwise SUB on the values pointed to by rn and imm12
   *rd = *rn - *imm12;
 } 
 
-void immSubFlags(uint64_t *rd, uint64_t *rn, uint64_t *imm12, PSTATE *pstate, bool z) {
+void immSubFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
   // Bitwise SUB on the values pointed to by rn and imm12
-  int result = *rn - *imm12;
+  uint64_t result = *rn - *imm12;
   *rd = result;
   
   int bits;
-  if (!z) { int bits = 32; }
-  else { int bits = 64; }
+  if (!z) { bits = 32; }
+  else { bits = 64; }
 
-  (*pstate).N = (result >> (bits - 1));
-  if (result == 0) { (*pstate).Z = 1; }
-  if ((*pstate).N) { (*pstate).C = 1; }
-  if (result > (2 << (bits - 1))) { (*pstate).V = 1; }
+  (state.PSTATE).N = (result >> (bits - 1));
+  if (result == 0) { (state.PSTATE).Z = 1; }
+  if ((state.PSTATE).N) { (state.PSTATE).C = 1; }
+  if (result > (2 << (bits - 1))) { (state.PSTATE).V = 1; }
 }
 
-void wMovN(uint64_t *rd, uint64_t *hw, uint64_t *imm16, bool z) {
+void wMovN(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
   //Sets the value in rd to the bitwise negation of imm16
   int bits;
-  if (!z) { int bits = 32; }
-  else { int bits = 64; }
+  if (!z) { bits = 32; }
+  else { bits = 64; }
 
-  *rd = (2 << bits) + imm16 - (2 << (int) hw);
+  *rd = (2 << bits) + (*imm16) - (2 << (*hw));
 }
 
-void wMovZ(uint64_t *rd, uint64_t *imm16) {
+void wMovZ(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
   //Sets the value in rd to imm16
   *rd = *imm16;
 }
 
-void wMovK(uint64_t *rd, uint64_t *hw, uint64_t *imm16, bool z) {
+void wMovK(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
   //Inserts the value of imm16 into rd, keeping all the other bits the same.
-  int bits;
-  if (!z) { int bits = 32; }
-  else { int bits = 64; }
+//  int bits;
+//  if (!z) { bits = 32; }
+//  else { bits = 64; }
 
   *rd = *rd - bits(*rd, *hw, *hw + 15) + (*imm16 * 2 << *hw);
 }
 
 // Functions for data processing instructions with registers (1.5)
 
-void regAnd(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regAnd(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // Bitwise AND on the values pointed to by rn and op2
   *rd = *rn & *op2;
 } 
 
-void regClear(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regClear(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // BIC is the same as AND with the complement of the second operand
   *rd = *rn & ~(*op2);
 }
 
-void regOr(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regOr(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // Bitwise OR on the values pointed to by rn and op2
   *rd = *rn | *op2;
 }
 
-void regOrn(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regOrn(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // Bitwise OR with the complement of the second operand
   *rd = *rn | ~(*op2);
 }
 
-void regXor(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regXor(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // Bitwise XOR on the values pointed to by rn and op2
   *rd = *rn ^ *op2;
 }
 
-void regXorn(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regXorn(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // Bitwise XOR with the complement of the second operand
   *rd = *rn ^ ~(*op2);
 }
@@ -285,26 +294,26 @@ void updateFlags(uint64_t result) {
   state.PSTATE.V = 0;
 }
 
-void regAndFlags(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regAndFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // Bitwise AND on the values pointed to by rn and op2
   uint64_t result = *rn & *op2;
   *rd = result;
   updateFlags(result);
 } 
 
-void regClearFlags(uint64_t *rd, uint64_t *rn, uint64_t *op2) {
+void regClearFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
   // Bitwise BIC on rn and op2
   uint64_t result = *rn & ~(*op2);
   *rd = result;
   updateFlags(result);
 } 
 
-void regmAdd(uint64_t *rd, uint64_t *ra, uint64_t *rn, uint64_t *rm) {
+void regmAdd(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm) {
   // Perform an mAdd on the values stored in ra, rn and rm
   *rd = *ra + ((*rn) * (*rm));
 }
 
-void regmSub(uint64_t *rd, uint64_t *ra, uint64_t *rn, uint64_t *rm) {
+void regmSub(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm) {
   // Perform an mSub on the values stored in ra, rn and rm
   *rd = *ra - ((*rn) * (*rm));
 }
@@ -390,15 +399,17 @@ uint64_t bitwiseShift(uint64_t rn, int mode, int instruction, int shift_amount) 
     switch (instruction) {
       case 0: return lsl32(rn, shift_amount);
       case 1: return lsr32(rn, shift_amount);
-      case 2: return asr32(rn, shift_amount); 
+      case 2: return asr32(rn, shift_amount);
       case 3: return ror32(rn, shift_amount);
+      default: exit(1);
     }
   } else {
     switch (instruction) {
       case 0: return lsl64(rn, shift_amount); 
       case 1: return lsr64(rn, shift_amount); 
       case 2: return asr64(rn, shift_amount); 
-      case 3: return ror64(rn, shift_amount); 
+      case 3: return ror64(rn, shift_amount);
+        default: exit(1);
     }
   }
 }
@@ -556,34 +567,30 @@ int halt() {
 //FETCH-DECODE part
 ///////////////////
 
-// returns the bits [start, end] of i
-static uint64_t bits(uint64_t i, int start, int end) {
-  return (((i) >> (start)) & (uint32_t) pow(2, (end) - (start) + 1) - 1);
-}
-
 static uint32_t fetch(void) {
     uint8_t* ci = state.memory + state.PC; // address of next instruction in memory
-    return (ci[0] + (ci[1] << 8) + (ci[2] << 16)); // convert 3 little endian bytes to 32 bit int
+    return (ci[0] + (ci[1] << 8) + (ci[2] << 16) + (ci[3] << 24)); // convert 4 little endian bytes to 32 bit int
 }
 
-extern uint64_t bitwiseShift(uint64_t rn, int mode, int instruction, int shift_amount);
-
+// Structs representing different instruction types
 typedef struct {
   bool      sf;
   uint64_t* Rd;
   uint64_t* Rn;
-  uint32_t  Op2;
+  uint64_t  Op2;
   uint64_t  opc;
 } arithmeticDPI;
 
 typedef struct {
   bool      sf;
+  uint64_t  hw;
   uint64_t* Rd;
-  uint16_t  Op;
+  uint64_t  Op;
   uint64_t opc;
 } wideMoveDPI;
 
 typedef struct {
+  bool      sf;
   uint64_t* Rd;
   uint64_t* Rn;
   uint64_t* Op2;
@@ -597,6 +604,7 @@ typedef struct {
   uint64_t* Rd;
   uint64_t* Rn;
   uint64_t* Ra;
+  uint64_t* Rm;
 } multiplyDPR;
 
 typedef struct {
@@ -624,7 +632,7 @@ typedef struct {
 typedef struct {
   bool sf;
   uint32_t simm19;
-  uint64_t Rt;
+  uint64_t* Rt;
 } LL;
 
 typedef union {
@@ -640,6 +648,7 @@ typedef union {
     instruction_t itype;
 } instruction;
 
+// Function decoding each instruction type
 instruction decodeArithmeticDPI(uint32_t i) {
   instruction instr       = { .itype = arithmeticDPIt };
   instr.arithmeticDpi.sf  = SF(i);
@@ -654,24 +663,26 @@ instruction decodeArithmeticDPI(uint32_t i) {
 instruction decodeWideMoveDPI(uint32_t i) {
   instruction instr     = { .itype = wideMoveDPIt };
   instr.wideMoveDpi.Rd  = state.R + RD(i);
-  instr.wideMoveDpi.Op  = OP2(i);
+  instr.wideMoveDpi.hw  = HW(i);
+  instr.wideMoveDpi.Op  = IMM16(i);
   instr.wideMoveDpi.sf  = SF(i);
   instr.wideMoveDpi.opc = OPC(i);
   return instr;
 }
 
 instruction decodeArithmeticDPR(uint32_t i) {
-  instruction instr;
+  instruction instr = { .itype = arithmeticDPIt };
   return instr;
 }
 
 instruction decodeLogicDPR(uint32_t i) {
   instruction instr  = { .itype = logicDPRt };
+  instr.logicDpr.sf  = SF(i);
   instr.logicDpr.Op2 = state.R + bitwiseShift(RM(i), SF(i), SHIFT(i), SH_OP(i));
   instr.logicDpr.Rd  = state.R + RD(i);
   instr.logicDpr.Rn  = state.R + RN(i); 
   instr.logicDpr.opc = OPC(i);
-  //check for 11111 which represets ZR
+  //check for 11111 which represents ZR
   if (instr.logicDpr.Op2 == (uint64_t*) 63) { instr.logicDpr.Op2 =  (uint64_t* const) &state.ZR; }
   if (instr.logicDpr.Rn  == (uint64_t*) 63) { instr.logicDpr.Rn  =  (uint64_t* const) &state.ZR; }
   return instr;
@@ -683,6 +694,7 @@ instruction decodeMultiplyDPR(uint32_t i) {
   instr.multiplyDpr.Rd = state.R + RD(i);
   instr.multiplyDpr.Rn = state.R + RN(i);
   instr.multiplyDpr.Ra = state.R + RA(i);
+  instr.multiplyDpr.Rm = state.R + RM(i);
   instr.multiplyDpr.X  = X(i);
   return instr;
 }
@@ -720,11 +732,12 @@ instruction decodeSDT(uint32_t i) {
 instruction decodeLL(uint32_t i) {
   instruction instr = { .itype = ll };
   instr.ll.sf = SFt(i);
-  instr.ll.Rt = RD(i);
+  instr.ll.Rt = state.R + RD(i);
   instr.ll.simm19 = SI19(i);
   return instr;
 }
 
+// Decode flow functions
 instruction decodeDPI(uint32_t i) {
     uint8_t opi = OPI(i);
     switch (opi) {
@@ -733,7 +746,7 @@ instruction decodeDPI(uint32_t i) {
         case 5: // opi: 101
             return decodeWideMoveDPI(i);
         default:
-            fprintf(stderr, "Unsupported operation");
+            fprintf(stderr, "Unsupported operation in DPI");
             exit(1);
     };
 }
@@ -744,7 +757,7 @@ instruction decodeDPR(uint32_t i) {
   if (M == 0 && (opr & 9) == 8) { return decodeArithmeticDPR(i); } // opr: 1xx0
   if (M == 0 && (opr & 8) == 0) { return decodeLogicDPR(i); }      // opr: 0xxx
   if (M == 1 && opr       == 8) { return decodeMultiplyDPR(i); }   // opr: 1000
-  fprintf(stderr, "Unknown operation");
+  fprintf(stderr, "Unknown operation in DPR");
   exit(1);
 }
 
@@ -772,14 +785,17 @@ instruction decodeB(uint32_t i) {
   }
 }
 
+// Main decode function
 instruction decode(uint32_t i) {
     uint8_t op0 = OP0(i);
-    if ((op0 >> 1) == 3) { return decodeDPI(i); } // op0: 100x
+    if ((op0 >> 1) == 4) { return decodeDPI(i); } // op0: 100x
     if ((op0 & 7)  == 5) { return decodeDPR(i); } // op0: x101
     if ((op0 & 5)  == 4) { return decodeLS(i);  } // op0: x1x0
     if ((op0 >> 1) == 5) { return decodeB(i);   } // op0: 101x
-    fprintf(stderr, "Unknown operation");
-    exit(1);
+    else {
+        fprintf(stderr, "Unknown operation in decode: op0 is %d, i is %d", op0, i);
+        exit(1);
+    }
 }
 
 ////////////////
@@ -787,103 +803,138 @@ instruction decode(uint32_t i) {
 ////////////////
 
 void executeArithmeticDPI(instruction i) {
+    void (*func)(uint64_t*, const uint64_t*, const uint64_t*, bool);
   switch (i.arithmeticDpi.opc) {
     case (add):
-      break;
+        func = &immAdd;
+        break;
     case (adds):
-      break;
+        func = &immAddFlags;
+        break;
     case (sub):
-      break;
+        func = &immSub;
+        break;
     case (subs):
-      break;
+        func = &immSubFlags;
+        break;
   }
+    (*func)(i.arithmeticDpi.Rd, i.arithmeticDpi.Rn, &i.arithmeticDpi.Op2, i.arithmeticDpi.sf);
 }
 
 void executeWideMoveDPI(instruction i) {
+    void (*func)(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, const bool z);
   switch (i.wideMoveDpi.opc) {
     case (movn):
-      break;
+        func = &wMovN;
+        break;
     case (movz):
-      break;
+        func = &wMovZ;
+        break;
     case (movk):
-      break;
+        func = &wMovK;
+        break;
   }
+    (*func)(i.wideMoveDpi.Rd, &i.wideMoveDpi.hw, &i.wideMoveDpi.Op, i.arithmeticDpi.sf);
 }
 
 void executeLogicDPR(instruction i) {
+    void (*func)(uint64_t *rd, const uint64_t *rn, const uint64_t *op2);
   if (i.logicDpr.N) {
     switch (i.logicDpr.opc) {
       case (bic):
+          func = &regClear;
         break;
       case (orn):
+          func = &regOrn;
         break;
       case (eon):
+          func = &regXorn;
         break;
       case (bics):
+          func = &regClearFlags;
         break;
     }
   } else {
     switch (i.logicDpr.opc) {
       case (and):
+          func = &regAnd;
         break;
       case (orr):
+          func = &regOr;
         break;
       case (eor):
+          func = &regXor;
         break;
       case (ands):
+          func = &regAndFlags;
         break;
     }
   }
+    (*func)(i.logicDpr.Rd, i.logicDpr.Rn, i.logicDpr.Op2);
 }
 
 void executeMultiplyDPR(instruction i) {
+    void (*func)(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm);
   if (i.multiplyDpr.X) {
-    
+    func = &regmSub;
   } else {
-
+    func = &regmAdd;
   }
+    (*func)(i.multiplyDpr.Rd, i.multiplyDpr.Ra, i.multiplyDpr.Rn, i.multiplyDpr.Rm);
 }
 
 void executeBranch(instruction i) {
-
+    unCondBranch(i.branch.offset);
 }
 
 void executeBreg(instruction i) {
-
+    registerBranch(i.breg.Xn);
 }
 
 void executeBcond(instruction i) {
-  
+    condBranch(i.bcond.offset, i.bcond.cond);
 }
 
 void executeSDT(instruction i) {
-
+    singleDataTransfer(i.sdt.sf, i.sdt.u, i.sdt.l, i.sdt.offset, i.sdt.Xn, i.sdt.Rt);
 }
 
 void executeLL(instruction i) {
-  
+    loadLiteral(i.ll.sf, i.ll.simm19, i.ll.Rt);
 }
 
 void execute(instruction i) {
   switch (i.itype) {
     case (arithmeticDPIt):
       executeArithmeticDPI(i);
+      break;
     case (wideMoveDPIt):
       executeWideMoveDPI(i);
+      break;
     case (logicDPRt):
       executeLogicDPR(i);
+      break;
     case (multiplyDPRt):
       executeMultiplyDPR(i);
+          break;
     case (brancht):
       executeBranch(i);
+          break;
     case (bregt):
       executeBreg(i);
+          break;
     case (bcondt):
       executeBcond(i);
+          break;
     case (sdt):
       executeSDT(i);
+          break;
     case (ll):
       executeLL(i);
+          break;
+  }
+  if (i.itype != brancht && i.itype != bcondt && i.itype != bregt) {
+      state.PC += 4;
   }
 }
 
@@ -892,11 +943,34 @@ int main(int argc, char **argv) {
   if (argc > 3 || argc < 2) { 
     fprintf(stderr, "Usage: emulate <file_in> [<file_out>]\n");
     exit(1);
-  } 
-  
+  }
+
   setup();
 
   loadfile(argv[1]);
+
+  uint32_t i = fetch();
+  instruction d;
+  while (i != HALT) {
+      d = decode(i);
+      execute(d);
+      i = fetch();
+  }
+
+  FILE* out;
+  if (argc == 3) {
+      out = fopen(argv[2], "w");
+      if (out == NULL) {
+          fprintf(stdout, "Output file not found\n");
+          exit(1);
+      }
+  } else {
+      out = stdout;
+  }
+  
+  char outstr[10000];
+  outputFile(outstr);
+    fprintf(out, "%s", outstr);
 
   return EXIT_SUCCESS;
 }
