@@ -232,27 +232,28 @@ void immSubFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z
   (state.PSTATE).V = (*rn > *imm12) && (*rd < *imm12);
 }
 
+// Function to perform a wide move with NOT
 void wMovN(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
-  //Sets the value in rd to the bitwise negation of imm16
-  int bits;
-  if (!z) { bits = 32; }
-  else { bits = 64; }
-
-  *rd = (2 << bits) + (*imm16) - (2 << (*hw));
+  uint64_t shift = (*hw & 0x3) * 16;
+  if (z) { *rd = ~((*imm16 & 0xFFFF) << shift); }
+  else { *rd = (uint32_t) (~((*imm16 & 0xFFFF) << shift)); }
 }
 
 void wMovZ(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
   //Sets the value in rd to imm16
-  *rd = *imm16;
+  *rd = (*imm16 << ((*hw & 0x3) * 16));
 }
 
+//function to perform a wide move while keeping bits
 void wMovK(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
-  //Inserts the value of imm16 into rd, keeping all the other bits the same.
-//  int bits;
-//  if (!z) { bits = 32; }
-//  else { bits = 64; }
-
-  *rd = *rd - bits(*rd, *hw, *hw + 15) + (*imm16 * 2 << *hw);
+  uint64_t shift = (*hw & 0x3) * 16;
+  if (z) {
+    uint64_t mask = ~(0xFFFFULL << shift);
+    *rd = (*rd & mask) | ((*imm16 & 0xFFFF) << shift);
+  } else {
+    uint32_t mask = ~(0xFFFFU << shift);
+    *rd = (uint32_t)((*rd & mask) | ((*imm16 & 0xFFFF) << shift));
+  }
 }
 
 // Functions for data processing instructions with registers (1.5)
