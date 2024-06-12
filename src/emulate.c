@@ -754,7 +754,7 @@ instruction decodeBranch(uint32_t i) {
 
 instruction decodeBreg(uint32_t i) {
   instruction instr = { .itype = bregt };
-  instr.instruction.breg.Xn = (uint64_t*) XN(i);
+  instr.instruction.breg.Xn = state.R + XN(i);
   return instr;
 }
 
