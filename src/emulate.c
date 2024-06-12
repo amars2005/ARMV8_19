@@ -668,6 +668,7 @@ instruction decodeArithmeticDPI(uint32_t i) {
   instr.instruction.arithmeticDpi.Op2 = OP2(i);
   instr.instruction.arithmeticDpi.opc = OPC(i);
   if (SH(i) == 1) { instr.instruction.arithmeticDpi.Op2 <<= 12; } // apply sh flag
+  if ((OPC(i) == adds || OPC(i) == subs) && RD(i) == 31) { instr.instruction.arithmeticDpi.Rd = (uint64_t*) &state.ZR; }
   return instr;
 }
 
@@ -688,7 +689,7 @@ instruction decodeArithmeticDPR(uint32_t i) {
   instr.instruction.arithmeticDpr.Rn = state.R + RN(i);
   instr.instruction.arithmeticDpr.Rm = state.R + RM(i);
   instr.instruction.arithmeticDpr.opc = OPC(i);
-  instr.itype = arithmeticDPRt;
+  if ((OPC(i) == adds || OPC(i) == subs) && RD(i) == 31) { instr.instruction.arithmeticDpr.Rd = (uint64_t*) &state.ZR; }
   return instr;
 }
 
