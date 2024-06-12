@@ -627,7 +627,7 @@ typedef struct {
   bool      sf;
   uint64_t* Rd;
   uint64_t* Rn;
-  uint64_t* Op2;
+  uint64_t Op2;
   uint64_t opc;
   bool N;
 } logicDPR;
@@ -725,12 +725,12 @@ instruction decodeArithmeticDPR(uint32_t i) {
 instruction decodeLogicDPR(uint32_t i) {
   instruction instr  = { .itype = logicDPRt };
   instr.instruction.logicDpr.sf  = SF(i);
-  instr.instruction.logicDpr.Op2 = state.R + bitwiseShift(RM(i), SF(i), SHIFT(i), SH_OP(i));
+  instr.instruction.logicDpr.Op2 = bitwiseShift(*(state.R + RM(i)), SF(i), SHIFT(i), SH_OP(i));
   instr.instruction.logicDpr.Rd  = state.R + RD(i);
   instr.instruction.logicDpr.Rn  = state.R + RN(i); 
   instr.instruction.logicDpr.opc = OPC(i);
   //check for 11111 which represents ZR
-  if (instr.instruction.logicDpr.Op2 == (uint64_t*) 63) { instr.instruction.logicDpr.Op2 =  (uint64_t* const) &state.ZR; }
+  if (RM(i) == 31) { instr.instruction.logicDpr.Op2 = 0; }
   if (instr.instruction.logicDpr.Rn  == (uint64_t*) 63) { instr.instruction.logicDpr.Rn  =  (uint64_t* const) &state.ZR; }
   return instr;
 }
@@ -936,7 +936,7 @@ void executeLogicDPR(instruction i) {
         break;
     }
   }
-    (*func)(i.instruction.logicDpr.Rd, i.instruction.logicDpr.Rn, i.instruction.logicDpr.Op2, i.instruction.logicDpr.sf);
+    (*func)(i.instruction.logicDpr.Rd, i.instruction.logicDpr.Rn, &i.instruction.logicDpr.Op2, i.instruction.logicDpr.sf);
 }
 
 void executeMultiplyDPR(instruction i) {
