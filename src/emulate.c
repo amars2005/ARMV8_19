@@ -129,11 +129,22 @@ void generateLine(uint64_t value, char line[], char outputString[]) {
   strcat(outputString, line); //adds the line to the string
 }
 
+void nonZeroGenerateLine(int i, char* line) {
+  char number[3];
+  sprintf(number, "%02x", state.memory[i]);
+  strcat(line, number);
+}
+
 void outputFile(char outputString[]) {
   for (int i = 0; i < GREG_NUM; i++) { //generates the line for the general registers
     uint64_t value = state.R[i];
     char line[LINE_STR_LENGTH];
-    sprintf(line, "X%d = ", i);
+    if (i < 10) {
+      sprintf(line, "X0%d = ", i);
+    } else {
+      sprintf(line, "X%d = ", i);
+    }
+    printf("%s",line);
     generateLine(value, line, outputString);
   }
 
@@ -142,17 +153,22 @@ void outputFile(char outputString[]) {
   generateLine(value, pc, outputString);  
   char pstate[] = "PSTATE : "; //generates the line to be outputted for pstate
 
+  if (state.PSTATE.N==1) { strcat(pstate, "N"); } else { strcat(pstate, "-"); }
   if (state.PSTATE.Z==1) { strcat(pstate, "Z"); } else { strcat(pstate, "-"); }
   if (state.PSTATE.C==1) { strcat(pstate, "C"); } else { strcat(pstate, "-"); }
-  if (state.PSTATE.N==1) { strcat(pstate, "N"); } else { strcat(pstate, "-"); }
   if (state.PSTATE.V==1) { strcat(pstate, "V\n"); } else { strcat(pstate, "-\n"); }
   strcat(outputString, pstate);
 
-  for (int i = 0; i < MEM_SIZE; i++) { //checks non-zero memory and adds it to the output string
-    if (state.memory[i] != 0) {
+  for (int i = 0; i < MEM_SIZE; i+=4) { //checks non-zero memory and adds it to the output string
+    if (state.memory[i] != 0 || state.memory[i+1] != 0 || state.memory[i+2] != 0 || state.memory[i+3] != 0) {
       char line[LINE_STR_LENGTH];
-      sprintf(line, "%d = ", i);
-      generateLine(state.memory[i], line, outputString); //adds any to the output
+      sprintf(line, "0x%08X : ", i);
+      nonZeroGenerateLine(i+3, line);
+      nonZeroGenerateLine(i+2, line);
+      nonZeroGenerateLine(i+1, line);
+      nonZeroGenerateLine(i, line);
+      strcat(line, "\n");
+      strcat(outputString, line); //adds any to the output
     }
   }
 }
@@ -958,13 +974,17 @@ int main(int argc, char **argv) {
   }
 
   FILE* out;
+  //fprintf(stderr, "goon\n");
   if (argc == 3) {
+    //fprintf(stderr, "goob\n");
       out = fopen(argv[2], "w");
+      printf("%s", argv[2]);
       if (out == NULL) {
           fprintf(stdout, "Output file not found\n");
           exit(1);
       }
   } else {
+      //fprintf(stderr, "gooc\n");
       out = stdout;
   }
   
