@@ -207,14 +207,21 @@ void immAddFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z
 
 void immSub(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
   // Bitwise SUB on the values pointed to by rn and imm12
-  *rd = *rn - *imm12;
+  if (z) { *rd = *rn - *imm12; }
+  else { 
+    uint32_t result = (uint32_t) *rn - (uint32_t) *imm12;
+    *rd = (uint64_t) result;
+  }  
 } 
 
 void immSubFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
   // Bitwise SUB on the values pointed to by rn and imm12
-  uint64_t result = *rn - *imm12;
-  *rd = result;
-  
+  if (z) { *rd = *rn - *imm12; }
+  else { 
+    uint32_t result = (uint32_t) *rn - (uint32_t) *imm12;
+    *rd = (uint64_t) result;
+  }  
+  uint64_t result = *rd;
   int bitNum;
   if (!z) { bitNum = 32; }
   else { bitNum = 64; }
@@ -250,34 +257,58 @@ void wMovK(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, bool z) {
 
 // Functions for data processing instructions with registers (1.5)
 
-void regAnd(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
+void regAnd(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool z) {
   // Bitwise AND on the values pointed to by rn and op2
-  *rd = *rn & *op2;
+  if (z) { *rd = *rn & *op2; }
+  else { 
+    uint32_t result = (uint32_t) *rn & (uint32_t) *op2; 
+    *rd = (uint64_t) result;
+  }
 } 
 
-void regClear(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
+void regClear(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool z) {
   // BIC is the same as AND with the complement of the second operand
-  *rd = *rn & ~(*op2);
+  if (z) { *rd = *rn & ~(*op2); }
+  else { 
+    uint32_t result = (uint32_t) *rn & (uint32_t) ~(*op2); 
+    *rd = (uint64_t) result;
+  }
 }
 
-void regOr(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
+void regOr(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool z) {
   // Bitwise OR on the values pointed to by rn and op2
-  *rd = *rn | *op2;
+  if (z) { *rd = *rn | *op2; }
+  else { 
+    uint32_t result = (uint32_t) *rn | (uint32_t) *op2; 
+    *rd = (uint64_t) result;
+  }
 }
 
-void regOrn(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
+void regOrn(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool z) {
   // Bitwise OR with the complement of the second operand
-  *rd = *rn | ~(*op2);
+  if (z) { *rd = *rn | ~(*op2); }
+  else { 
+    uint32_t result = (uint32_t) *rn | (uint32_t) ~(*op2); 
+    *rd = (uint64_t) result;
+  }
 }
 
-void regXor(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
+void regXor(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool z) {
   // Bitwise XOR on the values pointed to by rn and op2
-  *rd = *rn ^ *op2;
+  if (z) { *rd = *rn ^ *op2; }
+  else { 
+    uint32_t result = (uint32_t) *rn ^ (uint32_t) *op2; 
+    *rd = (uint64_t) result;
+  }
 }
 
-void regXorn(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
+void regXorn(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool z) {
   // Bitwise XOR with the complement of the second operand
-  *rd = *rn ^ ~(*op2);
+  if (z) { *rd = *rn ^ ~(*op2); }
+  else { 
+    uint32_t result = (uint32_t) *rn ^ (uint32_t) ~(*op2); 
+    *rd = (uint64_t) result;
+  }
 }
 
 void updateFlags(uint64_t result) {
@@ -291,18 +322,16 @@ void updateFlags(uint64_t result) {
   state.PSTATE.V = 0;
 }
 
-void regAndFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
+void regAndFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool z) {
   // Bitwise AND on the values pointed to by rn and op2
-  uint64_t result = *rn & *op2;
-  *rd = result;
-  updateFlags(result);
+  regAnd(rd, rn, op2, z);
+  updateFlags(*rd);
 } 
 
-void regClearFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2) {
+void regClearFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool z) {
   // Bitwise BIC on rn and op2
-  uint64_t result = *rn & ~(*op2);
-  *rd = result;
-  updateFlags(result);
+  regClear(rd, rn, op2, z);
+  updateFlags(*rd);
 } 
 
 void regmAdd(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm) {
@@ -874,7 +903,7 @@ void executeArithmeticDPR(instruction i) {
 }
 
 void executeLogicDPR(instruction i) {
-    void (*func)(uint64_t *rd, const uint64_t *rn, const uint64_t *op2);
+    void (*func)(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool);
   if (i.instruction.logicDpr.N) {
     switch (i.instruction.logicDpr.opc) {
       case (bic):
@@ -906,7 +935,7 @@ void executeLogicDPR(instruction i) {
         break;
     }
   }
-    (*func)(i.instruction.logicDpr.Rd, i.instruction.logicDpr.Rn, i.instruction.logicDpr.Op2);
+    (*func)(i.instruction.logicDpr.Rd, i.instruction.logicDpr.Rn, i.instruction.logicDpr.Op2, i.instruction.logicDpr.sf);
 }
 
 void executeMultiplyDPR(instruction i) {
