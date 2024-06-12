@@ -144,7 +144,6 @@ void outputFile(char outputString[]) {
     } else {
       sprintf(line, "X%d = ", i);
     }
-    printf("%s",line);
     generateLine(value, line, outputString);
   }
 
@@ -666,8 +665,9 @@ typedef union {
 
 // Function decoding each instruction type
 instruction decodeArithmeticDPI(uint32_t i) {
-  instruction instr       = { .itype = arithmeticDPIt };
+  instruction instr;
   instr.arithmeticDpi.sf  = SF(i);
+  instr.itype = arithmeticDPIt;
   instr.arithmeticDpi.Rd  = state.R + RD(i);
   instr.arithmeticDpi.Rn  = state.R + RN(i);
   instr.arithmeticDpi.Op2 = OP2(i);
@@ -683,6 +683,7 @@ instruction decodeWideMoveDPI(uint32_t i) {
   instr.wideMoveDpi.Op  = IMM16(i);
   instr.wideMoveDpi.sf  = SF(i);
   instr.wideMoveDpi.opc = OPC(i);
+  instr.itype = wideMoveDPIt;
   return instr;
 }
 
@@ -694,6 +695,7 @@ instruction decodeArithmeticDPR(uint32_t i) {
 instruction decodeLogicDPR(uint32_t i) {
   instruction instr  = { .itype = logicDPRt };
   instr.logicDpr.sf  = SF(i);
+  instr.itype = logicDPRt;
   instr.logicDpr.Op2 = state.R + bitwiseShift(RM(i), SF(i), SHIFT(i), SH_OP(i));
   instr.logicDpr.Rd  = state.R + RD(i);
   instr.logicDpr.Rn  = state.R + RN(i); 
@@ -707,6 +709,7 @@ instruction decodeLogicDPR(uint32_t i) {
 instruction decodeMultiplyDPR(uint32_t i) {
   instruction instr    = { .itype = multiplyDPRt };
   instr.multiplyDpr.sf = SF(i);
+  instr.itype = multiplyDPRt;
   instr.multiplyDpr.Rd = state.R + RD(i);
   instr.multiplyDpr.Rn = state.R + RN(i);
   instr.multiplyDpr.Ra = state.R + RA(i);
@@ -819,7 +822,7 @@ instruction decode(uint32_t i) {
 ////////////////
 
 void executeArithmeticDPI(instruction i) {
-    void (*func)(uint64_t*, const uint64_t*, const uint64_t*, bool);
+  void (*func)(uint64_t*, const uint64_t*, const uint64_t*, bool);
   switch (i.arithmeticDpi.opc) {
     case (add):
         func = &immAdd;
@@ -838,7 +841,7 @@ void executeArithmeticDPI(instruction i) {
 }
 
 void executeWideMoveDPI(instruction i) {
-    void (*func)(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, const bool z);
+  void (*func)(uint64_t *rd, const uint64_t *hw, const uint64_t *imm16, const bool z);
   switch (i.wideMoveDpi.opc) {
     case (movn):
         func = &wMovN;
@@ -854,7 +857,7 @@ void executeWideMoveDPI(instruction i) {
 }
 
 void executeLogicDPR(instruction i) {
-    void (*func)(uint64_t *rd, const uint64_t *rn, const uint64_t *op2);
+  void (*func)(uint64_t *rd, const uint64_t *rn, const uint64_t *op2);
   if (i.logicDpr.N) {
     switch (i.logicDpr.opc) {
       case (bic):
@@ -886,17 +889,17 @@ void executeLogicDPR(instruction i) {
         break;
     }
   }
-    (*func)(i.logicDpr.Rd, i.logicDpr.Rn, i.logicDpr.Op2);
+  (*func)(i.logicDpr.Rd, i.logicDpr.Rn, i.logicDpr.Op2);
 }
 
 void executeMultiplyDPR(instruction i) {
-    void (*func)(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm);
+  void (*func)(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm);
   if (i.multiplyDpr.X) {
     func = &regmSub;
   } else {
     func = &regmAdd;
   }
-    (*func)(i.multiplyDpr.Rd, i.multiplyDpr.Ra, i.multiplyDpr.Rn, i.multiplyDpr.Rm);
+  (*func)(i.multiplyDpr.Rd, i.multiplyDpr.Ra, i.multiplyDpr.Rn, i.multiplyDpr.Rm);
 }
 
 void executeBranch(instruction i) {
@@ -978,7 +981,6 @@ int main(int argc, char **argv) {
   if (argc == 3) {
     //fprintf(stderr, "goob\n");
       out = fopen(argv[2], "w");
-      printf("%s", argv[2]);
       if (out == NULL) {
           fprintf(stdout, "Output file not found\n");
           exit(1);
@@ -990,7 +992,11 @@ int main(int argc, char **argv) {
   
   char outstr[10000];
   outputFile(outstr);
-    fprintf(out, "%s", outstr);
+  fprintf(out, "%s", outstr);
+  
+  if (out != stdout) {
+    fclose(out);
+  }
 
   return EXIT_SUCCESS;
 }
