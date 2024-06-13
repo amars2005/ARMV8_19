@@ -546,7 +546,12 @@ void singleDataTransfer(uint8_t sf, uint8_t U, uint8_t L, uint64_t offset, uint6
 
     if (msb == 0) {
       uint64_t I = (offset >> 1) & 1;
-      uint64_t simm9 = (offset >> 2) & 0x1FF;
+      int64_t simm9 = (offset >> 2) & 0x1FF;
+      
+      // sign propogation
+      if (bits(simm9, 8, 8)) { // if negative
+        simm9 |= ~((1<<9)-1);
+      }
 
       if (I == 0) {
         postIndex(sf, xn, simm9, L, rt);
