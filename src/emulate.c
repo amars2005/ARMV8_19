@@ -186,26 +186,37 @@ static void loadfile(char fileName[]) {
 
 // Functions for data processing instructions using immediate addressing (1.4)
 
-void immAdd(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
+void immAdd(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool sf) {
   // Bitwise ADD on the values pointed to by rn and imm12
-  *rd = *rn + *imm12;
+  if (sf) {
+    *rd = *rn + *imm12;
+  } else {
+    *rd = (uint32_t) (*rn + *imm12);
+  }
 } 
 
-void immAddFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
+void immAddFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool sf) {
   // Bitwise ADD on the values pointed to by rn and imm12
-  uint64_t result = *rn + *imm12;
+  uint64_t result;
+
+  if (sf) {
+    result = *rn + *imm12;
+  } else {
+    result = (uint32_t) (*rn + *imm12);
+  }
+
   *rd = result;
 
   (state.PSTATE).Z = (result == 0); 
 
-  if (z) { // 64 bit mode
+  if (sf) { // 64 bit mode
     (state.PSTATE).N = (result >> 63);
     (state.PSTATE).C = (result < *rn || result < *imm12);
-    (state.PSTATE).V = (((long long) *rn > 0 && (long long) *imm12 > 0 && (long long) result < 0) || ((long long) *rn < 0 && (long long) *imm12 < 0 && (long long) result > 0));
+    (state.PSTATE).V = (((int64_t) *rn > 0 && (int64_t) *imm12 > 0 && (int64_t) result < 0) || ((int64_t) *rn < 0 && (int64_t) *imm12 < 0 && (int64_t) result > 0));
   } else { // 32 bit mode
     (state.PSTATE).N = (result >> 31);
-    (state.PSTATE).C = ((uint32_t) result < *rn || (uint32_t) result < *imm12);
-    (state.PSTATE).V = (((long) *rn > 0 && (long) *imm12 > 0 && (long) result < 0) || ((long) *rn < 0 && (long) *imm12 < 0 && (long) result > 0));
+    (state.PSTATE).C = ((uint32_t) result < (uint32_t) *rn || (uint32_t) result < (uint32_t) *imm12);
+    (state.PSTATE).V = (((int32_t) *rn > 0 && (int32_t) *imm12 > 0 && (int32_t) result < 0) || ((int32_t) *rn < 0 && (int32_t) *imm12 < 0 && (int32_t) result > 0));
   }
 }
 
@@ -232,11 +243,11 @@ void immSubFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z
   if (z) { // 64 bit mode
     (state.PSTATE).N = (result >> 63);
     (state.PSTATE).C = (*rn >= *imm12);
-    (state.PSTATE).V = (((long long) *rn > 0 && (long long) *imm12 < 0 && (long long) result < 0) || ((long long) *rn < 0 && (long long) *imm12 > 0 && (long long) result > 0));
+    (state.PSTATE).V = (((int64_t) *rn > 0 && (int64_t) *imm12 < 0 && (int64_t) result < 0) || ((int64_t) *rn < 0 && (int64_t) *imm12 > 0 && (int64_t) result > 0));
   } else { // 32 bit mode
     (state.PSTATE).N = (result >> 31);
     (state.PSTATE).C = ((uint32_t) *rn >= (uint32_t) *imm12);
-    (state.PSTATE).V = (((long) *rn > 0 && (long) *imm12 < 0 && (long) result < 0) || ((long) *rn < 0 && (long) *imm12 > 0 && (long) result > 0));
+    (state.PSTATE).V = (((int32_t) *rn > 0 && (int32_t) *imm12 < 0 && (int32_t) result < 0) || ((int32_t) *rn < 0 && (int32_t) *imm12 > 0 && (int32_t) result > 0));
   }
 }
 
@@ -466,12 +477,12 @@ void load(uint64_t *rn, uint8_t sf, uint64_t addr) {
   uint64_t regVal = 0;
   if (sf == 0) {
     for (int i = 0; i < 4; i++) {
-      regVal += state.memory[addr + i] << (i * 8);
+      regVal += (uint64_t) state.memory[addr + i] << (i * 8);
     }
     *rn = regVal;
   } else {
     for (int i = 0; i < 8; i++) {
-      regVal += state.memory[addr + i] << (i * 8);
+      regVal += (uint64_t) state.memory[addr + i] << (i * 8);
     }
     *rn = regVal;
   }
