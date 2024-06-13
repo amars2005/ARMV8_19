@@ -82,7 +82,7 @@ struct {
   uint64_t R     [GREG_NUM]; // General Purpose Registers
   uint64_t PC              ; // Program Counter
   PSTATE   PSTATE          ; // Processor State
-  const uint64_t ZR        ; // Zero Register
+  uint64_t ZR        ; // Zero Register
 } state = { .ZR = 0 };
 
 // sets the values of memory and registers to 0x0
@@ -609,6 +609,8 @@ void condBranch(uint64_t offset, uint64_t cond) {
   }
   if (condEval) {
     unCondBranch(offset);
+  } else {
+    state.PC += 4;
   }
 }
 
@@ -761,7 +763,7 @@ instruction decodeLogicDPR(uint32_t i) {
   instr.instruction.logicDpr.N   = N(i);
   //check for 11111 which represents ZR
   if (RM(i) == 31) { instr.instruction.logicDpr.Op2 = 0; }
-  if (instr.instruction.logicDpr.Rn  == (uint64_t*) 63) { instr.instruction.logicDpr.Rn  =  (uint64_t* const) &state.ZR; }
+  if (RN(i) == 31) { instr.instruction.logicDpr.Rn  =  (uint64_t* const) &state.ZR; }
   return instr;
 }
 
@@ -1037,6 +1039,7 @@ void execute(instruction i) {
   if (i.itype != brancht && i.itype != bcondt && i.itype != bregt) {
       state.PC += 4;
   }
+  state.ZR = 0;
 }
 
 int main(int argc, char **argv) {
