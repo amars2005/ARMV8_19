@@ -312,27 +312,29 @@ void regXorn(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool z) {
   }
 }
 
-void updateFlags(uint64_t result) {
+void updateFlags(uint64_t result, bool sf) {
   // Helper method to update the flags
-  // N is set to sign bit of the result (not sure if this is correct)
-  state.PSTATE.N = (result >> 63);
-  if (result == 0) {
-    state.PSTATE.Z = 1;
+  // N is set to sign bit of the result
+  if (sf) { // 64 bit mode
+    state.PSTATE.N = (result >> 63);
+  } else { // 32 bit mode
+    state.PSTATE.N = (result >> 31);
   }
+  state.PSTATE.Z = result == 0;
   state.PSTATE.C = 0;
   state.PSTATE.V = 0;
 }
 
-void regAndFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool z) {
+void regAndFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool sf) {
   // Bitwise AND on the values pointed to by rn and op2
-  regAnd(rd, rn, op2, z);
-  updateFlags(*rd);
+  regAnd(rd, rn, op2, sf);
+  updateFlags(*rd, sf);
 } 
 
-void regClearFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool z) {
+void regClearFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool sf) {
   // Bitwise BIC on rn and op2
-  regClear(rd, rn, op2, z);
-  updateFlags(*rd);
+  regClear(rd, rn, op2, sf);
+  updateFlags(*rd, sf);
 } 
 
 void regmAdd(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm) {
