@@ -345,14 +345,22 @@ void regClearFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool s
   updateFlags(*rd, sf);
 } 
 
-void regmAdd(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm) {
+void regmAdd(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm, bool sf) {
   // Perform an mAdd on the values stored in ra, rn and rm
-  *rd = *ra + ((*rn) * (*rm));
+  if (sf) {
+    *rd = *ra + ((*rn) * (*rm));
+  } else {
+    *rd = (uint32_t) (*ra + ((*rn) * (*rm)));
+  }
 }
 
-void regmSub(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm) {
+void regmSub(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm, bool sf) {
   // Perform an mSub on the values stored in ra, rn and rm
-  *rd = *ra - ((*rn) * (*rm));
+  if (sf) {
+    *rd = *ra - ((*rn) * (*rm));
+  } else {
+    *rd = (uint32_t) (*ra - ((*rn) * (*rm)));
+  }
 }
 
 
@@ -951,13 +959,13 @@ void executeLogicDPR(instruction i) {
 }
 
 void executeMultiplyDPR(instruction i) {
-    void (*func)(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm);
+    void (*func)(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm, bool sf);
   if (i.instruction.multiplyDpr.X) {
     func = &regmSub;
   } else {
     func = &regmAdd;
   }
-    (*func)(i.instruction.multiplyDpr.Rd, i.instruction.multiplyDpr.Ra, i.instruction.multiplyDpr.Rn, i.instruction.multiplyDpr.Rm);
+    (*func)(i.instruction.multiplyDpr.Rd, i.instruction.multiplyDpr.Ra, i.instruction.multiplyDpr.Rn, i.instruction.multiplyDpr.Rm, i.instruction.multiplyDpr.sf);
 }
 
 void executeBranch(instruction i) {
