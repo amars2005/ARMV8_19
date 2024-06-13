@@ -568,7 +568,7 @@ void loadLiteral(uint8_t sf, uint64_t simm19, uint64_t *rt) {
 
 // Functions for branch instructions (1.8)
 
-void unCondBranch(uint64_t offset) {
+void unCondBranch(int64_t offset) {
   // Apply the offset to the PC
   state.PC += offset; 
 }
@@ -578,7 +578,7 @@ void registerBranch(uint64_t *xn) {
   state.PC = (*xn);
 }
 
-void condBranch(uint64_t offset, uint64_t cond) {
+void condBranch(int64_t offset, uint64_t cond) {
   // Apply the offset to the PC iff cond is satisfied by PSTATE
   bool condEval;
   switch (cond) {
@@ -764,6 +764,7 @@ instruction decodeLogicDPR(uint32_t i) {
   //check for 11111 which represents ZR
   if (RM(i) == 31) { instr.instruction.logicDpr.Op2 = 0; }
   if (RN(i) == 31) { instr.instruction.logicDpr.Rn  =  (uint64_t* const) &state.ZR; }
+  if (RD(i) == 31) { instr.instruction.logicDpr.Rd  =  (uint64_t* const) &state.ZR; }
   return instr;
 }
 
@@ -783,6 +784,10 @@ instruction decodeMultiplyDPR(uint32_t i) {
 instruction decodeBranch(uint32_t i) {
   instruction instr = { .itype = brancht };
   instr.instruction.branch.offset = SI26(i) * 4;
+    // sign propogation
+  if (bits(instr.instruction.bcond.offset, 25, 25)) { // if negative
+    instr.instruction.bcond.offset |= ~((1<<26)-1);
+  }
   return instr;
 }
 
@@ -796,6 +801,10 @@ instruction decodeBcond(uint32_t i) {
   instruction instr  = { .itype = bcondt };
   instr.instruction.bcond.offset = SI19(i) * 4;
   instr.instruction.bcond.cond   = COND(i);
+  // sign propogation
+  if (bits(instr.instruction.bcond.offset, 18, 18)) { // if negative
+    instr.instruction.bcond.offset |= ~((1<<19)-1);
+  }
   return instr;
 }
 
