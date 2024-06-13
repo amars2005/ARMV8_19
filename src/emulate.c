@@ -470,7 +470,6 @@ void store(uint64_t *rn, uint8_t sf, uint64_t addr) {
       state.memory[addr + i] = (uint8_t) ((*rn >> (i * 8)) & twoBitMask);
     }
   }
-  load(rn, sf, addr);
 }
 
 void unsignedOffset(uint8_t sf, uint64_t *xn, uint64_t imm12, uint8_t L, uint64_t *rt) {
