@@ -762,6 +762,8 @@ instruction decodeMultiplyDPR(uint32_t i) {
   instr.instruction.multiplyDpr.Ra = state.R + RA(i);
   instr.instruction.multiplyDpr.Rm = state.R + RM(i);
   instr.instruction.multiplyDpr.X  = X(i);
+  //check for 11111 which represents ZR
+  if (RA(i) == 31) { instr.instruction.multiplyDpr.Ra = (uint64_t* const) &state.ZR; }
   return instr;
 }
 
