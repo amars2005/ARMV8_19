@@ -621,7 +621,7 @@ typedef struct {
   bool      sf;
   uint64_t* Rd;
   uint64_t* Rn;
-  uint64_t* Rm;
+  uint64_t Op2;
   uint64_t  opc;
 } arithmeticDPR;
 
@@ -718,9 +718,9 @@ instruction decodeArithmeticDPR(uint32_t i) {
   instr.instruction.arithmeticDpr.sf = SF(i);
   instr.instruction.arithmeticDpr.Rd = state.R + RD(i);
   instr.instruction.arithmeticDpr.Rn = state.R + RN(i);
-  instr.instruction.arithmeticDpr.Rm = state.R + RM(i);
+  instr.instruction.arithmeticDpr.Op2 = bitwiseShift(*(state.R + RM(i)), SF(i), SHIFT(i), SH_OP(i));
   instr.instruction.arithmeticDpr.opc = OPC(i);
-  if ((OPC(i) == adds || OPC(i) == subs) && RD(i) == 31) { instr.instruction.arithmeticDpr.Rd = (uint64_t*) &state.ZR; }
+  if ((OPC(i) == adds || OPC(i) == subs) && RD(i) == 31) { instr.instruction.arithmeticDpr.Rd = (uint64_t* const) &state.ZR; }
   return instr;
 }
 
@@ -902,7 +902,7 @@ void executeArithmeticDPR(instruction i) {
         func = &immSubFlags;
         break;
   }
-    (*func)(i.instruction.arithmeticDpr.Rd, i.instruction.arithmeticDpr.Rn, i.instruction.arithmeticDpr.Rm, i.instruction.arithmeticDpi.sf);
+    (*func)(i.instruction.arithmeticDpr.Rd, i.instruction.arithmeticDpr.Rn, &i.instruction.arithmeticDpr.Op2, i.instruction.arithmeticDpi.sf);
 }
 
 void executeLogicDPR(instruction i) {
