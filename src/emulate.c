@@ -561,7 +561,7 @@ void singleDataTransfer(uint8_t sf, uint8_t U, uint8_t L, uint64_t offset, uint6
   }
 }
 
-void loadLiteral(uint8_t sf, uint64_t simm19, uint64_t *rt) {
+void loadLiteral(uint8_t sf, int64_t simm19, uint64_t *rt) {
   uint64_t transferAddr = state.PC + (simm19 << 2);
   load(rt, sf, transferAddr);
 }
@@ -696,7 +696,7 @@ typedef struct {
 
 typedef struct {
   bool sf;
-  uint32_t simm19;
+  int32_t simm19;
   uint64_t* Rt;
 } LL;
 
@@ -785,8 +785,8 @@ instruction decodeBranch(uint32_t i) {
   instruction instr = { .itype = brancht };
   instr.instruction.branch.offset = SI26(i) * 4;
     // sign propogation
-  if (bits(instr.instruction.bcond.offset, 25, 25)) { // if negative
-    instr.instruction.bcond.offset |= ~((1<<26)-1);
+  if (bits(instr.instruction.branch.offset, 25, 25)) { // if negative
+    instr.instruction.branch.offset |= ~((1<<26)-1);
   }
   return instr;
 }
@@ -824,6 +824,9 @@ instruction decodeLL(uint32_t i) {
   instr.instruction.ll.sf = SFt(i);
   instr.instruction.ll.Rt = state.R + RD(i);
   instr.instruction.ll.simm19 = SI19(i);
+  if (bits(instr.instruction.ll.simm19, 18, 18)) { // if negative
+    instr.instruction.ll.simm19 |= ~((1<<19)-1);
+  }
   return instr;
 }
 
