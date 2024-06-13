@@ -51,6 +51,7 @@ call example: ./emulate <file_in>            - output to stdout
 #define SFt(i)   bits(i,30,30)
 #define HW(i)    bits(i,21,22)
 #define IMM16(i) bits(i,5,20)
+#define N(i)     bits(i,21,21)
 
 #define BRANCH 0
 #define BREG   6
@@ -195,15 +196,6 @@ void immAddFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z
   uint64_t result = *rn + *imm12;
   *rd = result;
 
-  // int bitNum;
-  // if (!z) { bitNum = 32; }
-  // else { bitNum = 64; }
-
-  // (state.PSTATE).N = (result >> (bitNum - 1));
-  // (state.PSTATE).Z = (result == 0); 
-  // (state.PSTATE).C = (result < *rn || result < *imm12); 
-  // (state.PSTATE).V = (result > (1ULL << (bitNum - 1))); 
-
   (state.PSTATE).Z = (result == 0); 
 
   if (z) { // 64 bit mode
@@ -234,15 +226,6 @@ void immSubFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z
     *rd = (uint64_t) result;
   }  
   uint64_t result = *rd;
-
-  // int bitNum;
-  // if (!z) { bitNum = 32; }
-  // else { bitNum = 64; }
-
-  // (state.PSTATE).N = (result >> (bitNum - 1));
-  // (state.PSTATE).Z = (result == 0); 
-  // (state.PSTATE).C = !(state.PSTATE).N; 
-  // (state.PSTATE).V = (*rn > *imm12) && (*rd < *imm12);
 
   (state.PSTATE).Z = (result == 0); 
 
@@ -756,6 +739,7 @@ instruction decodeLogicDPR(uint32_t i) {
   instr.instruction.logicDpr.Rd  = state.R + RD(i);
   instr.instruction.logicDpr.Rn  = state.R + RN(i); 
   instr.instruction.logicDpr.opc = OPC(i);
+  instr.instruction.logicDpr.N   = N(i);
   //check for 11111 which represents ZR
   if (RM(i) == 31) { instr.instruction.logicDpr.Op2 = 0; }
   if (instr.instruction.logicDpr.Rn  == (uint64_t*) 63) { instr.instruction.logicDpr.Rn  =  (uint64_t* const) &state.ZR; }
