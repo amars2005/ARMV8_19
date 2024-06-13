@@ -59,14 +59,17 @@ call example: ./emulate <file_in>            - output to stdout
 
 #define HALT   0x8a000000
 
+#define movn 0
+#define movz 2
+#define movk 3
+
+// Macro that given an number of smaller size, propogatates its sign to a 64 bit number
+#define PROP(i, size) ((bits((i),(size)-1,(size)-1)) ? (i)|(~((1<<(size))-1)) : (i))
+
 typedef enum { arithmeticDPIt, wideMoveDPIt, arithmeticDPRt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdt, ll } instruction_t;
 typedef enum { add, adds, sub, subs } arithmeticDPI_t;
 typedef enum { and, orr, eor, ands} logicDPR_t;
 typedef enum { bic, orn, eon, bics} logicDPRN_t;
-
-#define movn 0
-#define movz 2
-#define movk 3
 
 // structure representing Processor State Register
 typedef struct {
@@ -546,12 +549,7 @@ void singleDataTransfer(uint8_t sf, uint8_t U, uint8_t L, uint64_t offset, uint6
 
     if (msb == 0) {
       uint64_t I = (offset >> 1) & 1;
-      int64_t simm9 = (offset >> 2) & 0x1FF;
-      
-      // sign propogation
-      if (bits(simm9, 8, 8)) { // if negative
-        simm9 |= ~((1<<9)-1);
-      }
+      int64_t simm9 = PROP((offset >> 2) & 0x1FF, 9);
 
       if (I == 0) {
         postIndex(sf, xn, simm9, L, rt);
@@ -788,11 +786,7 @@ instruction decodeMultiplyDPR(uint32_t i) {
 
 instruction decodeBranch(uint32_t i) {
   instruction instr = { .itype = brancht };
-  instr.instruction.branch.offset = SI26(i) * 4;
-    // sign propogation
-  if (bits(instr.instruction.branch.offset, 25, 25)) { // if negative
-    instr.instruction.branch.offset |= ~((1<<26)-1);
-  }
+  instr.instruction.branch.offset = PROP(SI26(i) * 4, 26);
   return instr;
 }
 
@@ -804,12 +798,8 @@ instruction decodeBreg(uint32_t i) {
 
 instruction decodeBcond(uint32_t i) {
   instruction instr  = { .itype = bcondt };
-  instr.instruction.bcond.offset = SI19(i) * 4;
+  instr.instruction.bcond.offset = PROP(SI19(i) * 4, 19);
   instr.instruction.bcond.cond   = COND(i);
-  // sign propogation
-  if (bits(instr.instruction.bcond.offset, 18, 18)) { // if negative
-    instr.instruction.bcond.offset |= ~((1<<19)-1);
-  }
   return instr;
 }
 
