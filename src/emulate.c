@@ -195,14 +195,26 @@ void immAddFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z
   uint64_t result = *rn + *imm12;
   *rd = result;
 
-  int bitNum;
-  if (!z) { bitNum = 32; }
-  else { bitNum = 64; }
+  // int bitNum;
+  // if (!z) { bitNum = 32; }
+  // else { bitNum = 64; }
 
-  (state.PSTATE).N = (result >> (bitNum - 1));
+  // (state.PSTATE).N = (result >> (bitNum - 1));
+  // (state.PSTATE).Z = (result == 0); 
+  // (state.PSTATE).C = (result < *rn || result < *imm12); 
+  // (state.PSTATE).V = (result > (1ULL << (bitNum - 1))); 
+
   (state.PSTATE).Z = (result == 0); 
-  (state.PSTATE).C = (result > (1ULL << bitNum)); 
-  (state.PSTATE).V = (result > (1ULL << (bitNum - 1))); 
+
+  if (z) { // 64 bit mode
+    (state.PSTATE).N = (result >> 63);
+    (state.PSTATE).C = (result < *rn || result < *imm12);
+    (state.PSTATE).V = (((long long) *rn > 0 && (long long) *imm12 > 0 && (long long) result < 0) || ((long long) *rn < 0 && (long long) *imm12 < 0 && (long long) result > 0));
+  } else { // 32 bit mode
+    (state.PSTATE).N = (result >> 31);
+    (state.PSTATE).C = ((uint32_t) result < *rn || (uint32_t) result < *imm12);
+    (state.PSTATE).V = (((long) *rn > 0 && (long) *imm12 > 0 && (long) result < 0) || ((long) *rn < 0 && (long) *imm12 < 0 && (long) result > 0));
+  }
 }
 
 void immSub(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
@@ -222,14 +234,27 @@ void immSubFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z
     *rd = (uint64_t) result;
   }  
   uint64_t result = *rd;
-  int bitNum;
-  if (!z) { bitNum = 32; }
-  else { bitNum = 64; }
 
-  (state.PSTATE).N = (result >> (bitNum - 1));
+  // int bitNum;
+  // if (!z) { bitNum = 32; }
+  // else { bitNum = 64; }
+
+  // (state.PSTATE).N = (result >> (bitNum - 1));
+  // (state.PSTATE).Z = (result == 0); 
+  // (state.PSTATE).C = !(state.PSTATE).N; 
+  // (state.PSTATE).V = (*rn > *imm12) && (*rd < *imm12);
+
   (state.PSTATE).Z = (result == 0); 
-  (state.PSTATE).C = !(state.PSTATE).N; 
-  (state.PSTATE).V = (*rn > *imm12) && (*rd < *imm12);
+
+  if (z) { // 64 bit mode
+    (state.PSTATE).N = (result >> 63);
+    (state.PSTATE).C = (*rn >= *imm12);
+    (state.PSTATE).V = (((long long) *rn > 0 && (long long) *imm12 < 0 && (long long) result < 0) || ((long long) *rn < 0 && (long long) *imm12 > 0 && (long long) result > 0));
+  } else { // 32 bit mode
+    (state.PSTATE).N = (result >> 31);
+    (state.PSTATE).C = ((uint32_t) *rn >= (uint32_t) *imm12);
+    (state.PSTATE).V = (((long) *rn > 0 && (long) *imm12 < 0 && (long) result < 0) || ((long) *rn < 0 && (long) *imm12 > 0 && (long) result > 0));
+  }
 }
 
 // Function to perform a wide move with NOT
