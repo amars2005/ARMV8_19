@@ -51,6 +51,7 @@ call example: ./emulate <file_in>            - output to stdout
 #define SFt(i)   bits(i,30,30)
 #define HW(i)    bits(i,21,22)
 #define IMM16(i) bits(i,5,20)
+#define N(i)     bits(i,21,21)
 
 #define BRANCH 0
 #define BREG   6
@@ -58,14 +59,17 @@ call example: ./emulate <file_in>            - output to stdout
 
 #define HALT   0x8a000000
 
+#define movn 0
+#define movz 2
+#define movk 3
+
+// Macro that given an number of smaller size, propogatates its sign to a 64 bit number
+#define PROP(i, size) ((bits((i),(size)-1,(size)-1)) ? (i)|(~((1<<(size))-1)) : (i))
+
 typedef enum { arithmeticDPIt, wideMoveDPIt, arithmeticDPRt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdt, ll } instruction_t;
 typedef enum { add, adds, sub, subs } arithmeticDPI_t;
 typedef enum { and, orr, eor, ands} logicDPR_t;
 typedef enum { bic, orn, eon, bics} logicDPRN_t;
-
-#define movn 0
-#define movz 2
-#define movk 3
 
 // structure representing Processor State Register
 typedef struct {
@@ -81,7 +85,7 @@ struct {
   uint64_t R     [GREG_NUM]; // General Purpose Registers
   uint64_t PC              ; // Program Counter
   PSTATE   PSTATE          ; // Processor State
-  const uint64_t ZR        ; // Zero Register
+  uint64_t ZR        ; // Zero Register
 } state = { .ZR = 0 };
 
 // sets the values of memory and registers to 0x0
@@ -185,24 +189,38 @@ static void loadfile(char fileName[]) {
 
 // Functions for data processing instructions using immediate addressing (1.4)
 
-void immAdd(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
+void immAdd(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool sf) {
   // Bitwise ADD on the values pointed to by rn and imm12
-  *rd = *rn + *imm12;
+  if (sf) {
+    *rd = *rn + *imm12;
+  } else {
+    *rd = (uint32_t) (*rn + *imm12);
+  }
 } 
 
-void immAddFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
+void immAddFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool sf) {
   // Bitwise ADD on the values pointed to by rn and imm12
-  uint64_t result = *rn + *imm12;
+  uint64_t result;
+
+  if (sf) {
+    result = *rn + *imm12;
+  } else {
+    result = (uint32_t) (*rn + *imm12);
+  }
+
   *rd = result;
 
-  int bitNum;
-  if (!z) { bitNum = 32; }
-  else { bitNum = 64; }
-
-  (state.PSTATE).N = (result >> (bitNum - 1));
   (state.PSTATE).Z = (result == 0); 
-  (state.PSTATE).C = (result > (1ULL << bitNum)); 
-  (state.PSTATE).V = (result > (1ULL << (bitNum - 1))); 
+
+  if (sf) { // 64 bit mode
+    (state.PSTATE).N = (result >> 63);
+    (state.PSTATE).C = (result < *rn || result < *imm12);
+    (state.PSTATE).V = (((int64_t) *rn > 0 && (int64_t) *imm12 > 0 && (int64_t) result < 0) || ((int64_t) *rn < 0 && (int64_t) *imm12 < 0 && (int64_t) result > 0));
+  } else { // 32 bit mode
+    (state.PSTATE).N = (result >> 31);
+    (state.PSTATE).C = ((uint32_t) result < (uint32_t) *rn || (uint32_t) result < (uint32_t) *imm12);
+    (state.PSTATE).V = (((int32_t) *rn > 0 && (int32_t) *imm12 > 0 && (int32_t) result < 0) || ((int32_t) *rn < 0 && (int32_t) *imm12 < 0 && (int32_t) result > 0));
+  }
 }
 
 void immSub(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z) {
@@ -222,14 +240,18 @@ void immSubFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *imm12, bool z
     *rd = (uint64_t) result;
   }  
   uint64_t result = *rd;
-  int bitNum;
-  if (!z) { bitNum = 32; }
-  else { bitNum = 64; }
 
-  (state.PSTATE).N = (result >> (bitNum - 1));
   (state.PSTATE).Z = (result == 0); 
-  (state.PSTATE).C = !(state.PSTATE).N; 
-  (state.PSTATE).V = (*rn > *imm12) && (*rd < *imm12);
+
+  if (z) { // 64 bit mode
+    (state.PSTATE).N = (result >> 63);
+    (state.PSTATE).C = (*rn >= *imm12);
+    (state.PSTATE).V = (((int64_t) *rn > 0 && (int64_t) *imm12 < 0 && (int64_t) result < 0) || ((int64_t) *rn < 0 && (int64_t) *imm12 > 0 && (int64_t) result > 0));
+  } else { // 32 bit mode
+    (state.PSTATE).N = (result >> 31);
+    (state.PSTATE).C = ((uint32_t) *rn >= (uint32_t) *imm12);
+    (state.PSTATE).V = (((int32_t) *rn > 0 && (int32_t) *imm12 < 0 && (int32_t) result < 0) || ((int32_t) *rn < 0 && (int32_t) *imm12 > 0 && (int32_t) result > 0));
+  }
 }
 
 // Function to perform a wide move with NOT
@@ -312,37 +334,47 @@ void regXorn(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool z) {
   }
 }
 
-void updateFlags(uint64_t result) {
+void updateFlags(uint64_t result, bool sf) {
   // Helper method to update the flags
-  // N is set to sign bit of the result (not sure if this is correct)
-  state.PSTATE.N = (result >> 63);
-  if (result == 0) {
-    state.PSTATE.Z = 1;
+  // N is set to sign bit of the result
+  if (sf) { // 64 bit mode
+    state.PSTATE.N = (result >> 63);
+  } else { // 32 bit mode
+    state.PSTATE.N = (result >> 31);
   }
+  state.PSTATE.Z = result == 0;
   state.PSTATE.C = 0;
   state.PSTATE.V = 0;
 }
 
-void regAndFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool z) {
+void regAndFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool sf) {
   // Bitwise AND on the values pointed to by rn and op2
-  regAnd(rd, rn, op2, z);
-  updateFlags(*rd);
+  regAnd(rd, rn, op2, sf);
+  updateFlags(*rd, sf);
 } 
 
-void regClearFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool z) {
+void regClearFlags(uint64_t *rd, const uint64_t *rn, const uint64_t *op2, bool sf) {
   // Bitwise BIC on rn and op2
-  regClear(rd, rn, op2, z);
-  updateFlags(*rd);
+  regClear(rd, rn, op2, sf);
+  updateFlags(*rd, sf);
 } 
 
-void regmAdd(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm) {
+void regmAdd(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm, bool sf) {
   // Perform an mAdd on the values stored in ra, rn and rm
-  *rd = *ra + ((*rn) * (*rm));
+  if (sf) {
+    *rd = *ra + ((*rn) * (*rm));
+  } else {
+    *rd = (uint32_t) (*ra + ((*rn) * (*rm)));
+  }
 }
 
-void regmSub(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm) {
+void regmSub(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm, bool sf) {
   // Perform an mSub on the values stored in ra, rn and rm
-  *rd = *ra - ((*rn) * (*rm));
+  if (sf) {
+    *rd = *ra - ((*rn) * (*rm));
+  } else {
+    *rd = (uint32_t) (*ra - ((*rn) * (*rm)));
+  }
 }
 
 
@@ -448,12 +480,12 @@ void load(uint64_t *rn, uint8_t sf, uint64_t addr) {
   uint64_t regVal = 0;
   if (sf == 0) {
     for (int i = 0; i < 4; i++) {
-      regVal += state.memory[addr + i] << (i * 8);
+      regVal += (uint64_t) state.memory[addr + i] << (i * 8);
     }
     *rn = regVal;
   } else {
     for (int i = 0; i < 8; i++) {
-      regVal += state.memory[addr + i] << (i * 8);
+      regVal += (uint64_t) state.memory[addr + i] << (i * 8);
     }
     *rn = regVal;
   }
@@ -470,7 +502,6 @@ void store(uint64_t *rn, uint8_t sf, uint64_t addr) {
       state.memory[addr + i] = (uint8_t) ((*rn >> (i * 8)) & twoBitMask);
     }
   }
-  load(rn, sf, addr);
 }
 
 void unsignedOffset(uint8_t sf, uint64_t *xn, uint64_t imm12, uint8_t L, uint64_t *rt) {
@@ -518,7 +549,7 @@ void singleDataTransfer(uint8_t sf, uint8_t U, uint8_t L, uint64_t offset, uint6
 
     if (msb == 0) {
       uint64_t I = (offset >> 1) & 1;
-      uint64_t simm9 = (offset >> 2) & 0x1FF;
+      int64_t simm9 = PROP((offset >> 2) & 0x1FF, 9);
 
       if (I == 0) {
         postIndex(sf, xn, simm9, L, rt);
@@ -533,14 +564,14 @@ void singleDataTransfer(uint8_t sf, uint8_t U, uint8_t L, uint64_t offset, uint6
   }
 }
 
-void loadLiteral(uint8_t sf, uint64_t simm19, uint64_t *rt) {
+void loadLiteral(uint8_t sf, int64_t simm19, uint64_t *rt) {
   uint64_t transferAddr = state.PC + (simm19 << 2);
   load(rt, sf, transferAddr);
 }
 
 // Functions for branch instructions (1.8)
 
-void unCondBranch(uint64_t offset) {
+void unCondBranch(int64_t offset) {
   // Apply the offset to the PC
   state.PC += offset; 
 }
@@ -550,7 +581,7 @@ void registerBranch(uint64_t *xn) {
   state.PC = (*xn);
 }
 
-void condBranch(uint64_t offset, uint64_t cond) {
+void condBranch(int64_t offset, uint64_t cond) {
   // Apply the offset to the PC iff cond is satisfied by PSTATE
   bool condEval;
   switch (cond) {
@@ -581,6 +612,8 @@ void condBranch(uint64_t offset, uint64_t cond) {
   }
   if (condEval) {
     unCondBranch(offset);
+  } else {
+    state.PC += 4;
   }
 }
 
@@ -620,7 +653,7 @@ typedef struct {
   bool      sf;
   uint64_t* Rd;
   uint64_t* Rn;
-  uint64_t* Rm;
+  uint64_t Op2;
   uint64_t  opc;
 } arithmeticDPR;
 
@@ -666,7 +699,7 @@ typedef struct {
 
 typedef struct {
   bool sf;
-  uint32_t simm19;
+  int32_t simm19;
   uint64_t* Rt;
 } LL;
 
@@ -717,9 +750,9 @@ instruction decodeArithmeticDPR(uint32_t i) {
   instr.instruction.arithmeticDpr.sf = SF(i);
   instr.instruction.arithmeticDpr.Rd = state.R + RD(i);
   instr.instruction.arithmeticDpr.Rn = state.R + RN(i);
-  instr.instruction.arithmeticDpr.Rm = state.R + RM(i);
+  instr.instruction.arithmeticDpr.Op2 = bitwiseShift(*(state.R + RM(i)), SF(i), SHIFT(i), SH_OP(i));
   instr.instruction.arithmeticDpr.opc = OPC(i);
-  if ((OPC(i) == adds || OPC(i) == subs) && RD(i) == 31) { instr.instruction.arithmeticDpr.Rd = (uint64_t*) &state.ZR; }
+  if ((OPC(i) == adds || OPC(i) == subs) && RD(i) == 31) { instr.instruction.arithmeticDpr.Rd = (uint64_t* const) &state.ZR; }
   return instr;
 }
 
@@ -730,9 +763,11 @@ instruction decodeLogicDPR(uint32_t i) {
   instr.instruction.logicDpr.Rd  = state.R + RD(i);
   instr.instruction.logicDpr.Rn  = state.R + RN(i); 
   instr.instruction.logicDpr.opc = OPC(i);
+  instr.instruction.logicDpr.N   = N(i);
   //check for 11111 which represents ZR
   if (RM(i) == 31) { instr.instruction.logicDpr.Op2 = 0; }
-  if (instr.instruction.logicDpr.Rn  == (uint64_t*) 63) { instr.instruction.logicDpr.Rn  =  (uint64_t* const) &state.ZR; }
+  if (RN(i) == 31) { instr.instruction.logicDpr.Rn  =  (uint64_t* const) &state.ZR; }
+  if (RD(i) == 31) { instr.instruction.logicDpr.Rd  =  (uint64_t* const) &state.ZR; }
   return instr;
 }
 
@@ -744,12 +779,14 @@ instruction decodeMultiplyDPR(uint32_t i) {
   instr.instruction.multiplyDpr.Ra = state.R + RA(i);
   instr.instruction.multiplyDpr.Rm = state.R + RM(i);
   instr.instruction.multiplyDpr.X  = X(i);
+  //check for 11111 which represents ZR
+  if (RA(i) == 31) { instr.instruction.multiplyDpr.Ra = (uint64_t* const) &state.ZR; }
   return instr;
 }
 
 instruction decodeBranch(uint32_t i) {
   instruction instr = { .itype = brancht };
-  instr.instruction.branch.offset = SI26(i) * 4;
+  instr.instruction.branch.offset = PROP(SI26(i) * 4, 26);
   return instr;
 }
 
@@ -761,7 +798,7 @@ instruction decodeBreg(uint32_t i) {
 
 instruction decodeBcond(uint32_t i) {
   instruction instr  = { .itype = bcondt };
-  instr.instruction.bcond.offset = SI19(i) * 4;
+  instr.instruction.bcond.offset = PROP(SI19(i) * 4, 19);
   instr.instruction.bcond.cond   = COND(i);
   return instr;
 }
@@ -782,6 +819,9 @@ instruction decodeLL(uint32_t i) {
   instr.instruction.ll.sf = SFt(i);
   instr.instruction.ll.Rt = state.R + RD(i);
   instr.instruction.ll.simm19 = SI19(i);
+  if (bits(instr.instruction.ll.simm19, 18, 18)) { // if negative
+    instr.instruction.ll.simm19 |= ~((1<<19)-1);
+  }
   return instr;
 }
 
@@ -901,7 +941,7 @@ void executeArithmeticDPR(instruction i) {
         func = &immSubFlags;
         break;
   }
-    (*func)(i.instruction.arithmeticDpr.Rd, i.instruction.arithmeticDpr.Rn, i.instruction.arithmeticDpr.Rm, i.instruction.arithmeticDpi.sf);
+    (*func)(i.instruction.arithmeticDpr.Rd, i.instruction.arithmeticDpr.Rn, &i.instruction.arithmeticDpr.Op2, i.instruction.arithmeticDpi.sf);
 }
 
 void executeLogicDPR(instruction i) {
@@ -941,13 +981,13 @@ void executeLogicDPR(instruction i) {
 }
 
 void executeMultiplyDPR(instruction i) {
-    void (*func)(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm);
+    void (*func)(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_t *rm, bool sf);
   if (i.instruction.multiplyDpr.X) {
     func = &regmSub;
   } else {
     func = &regmAdd;
   }
-    (*func)(i.instruction.multiplyDpr.Rd, i.instruction.multiplyDpr.Ra, i.instruction.multiplyDpr.Rn, i.instruction.multiplyDpr.Rm);
+    (*func)(i.instruction.multiplyDpr.Rd, i.instruction.multiplyDpr.Ra, i.instruction.multiplyDpr.Rn, i.instruction.multiplyDpr.Rm, i.instruction.multiplyDpr.sf);
 }
 
 void executeBranch(instruction i) {
@@ -1006,6 +1046,7 @@ void execute(instruction i) {
   if (i.itype != brancht && i.itype != bcondt && i.itype != bregt) {
       state.PC += 4;
   }
+  state.ZR = 0;
 }
 
 int main(int argc, char **argv) {
