@@ -108,34 +108,30 @@ static uint64_t bits(uint64_t i, int start, int end) {
 }
 
 void generateLine(uint64_t value, char line[], char outputString[]) {
-  char x[17];
+  char x[18];
   sprintf(x, "%016" PRIx64, value);
+  strcat(x,"\n");
   strcat(line, x); //adds the value to the line
-  strcat(line, "\n");
   strcat(outputString, line); //adds the line to the string
 }
 
 void nonZeroGenerateLine(int i, char* line) {
-  char number[3];
-  sprintf(number, "%02x", state.memory[i]);
+  char number[10];
+  sprintf(number, "%02x%02x%02x%02x\n", state.memory[i+3], state.memory[i+2], state.memory[i+1], state.memory[i]);
   strcat(line, number);
 }
 
 void outputFile(char outputString[]) {
+  strcat(outputString, "Registers:\n");
   for (int i = 0; i < GREG_NUM; i++) { //generates the line for the general registers
     uint64_t value = state.R[i];
     char line[LINE_STR_LENGTH];
-    if (i < 10) {
-      sprintf(line, "X0%d = ", i);
-    } else {
-      sprintf(line, "X%d = ", i);
-    }
+    sprintf(line, "X%02d = ", i);
     generateLine(value, line, outputString);
   }
 
   char pc[] = "PC = "; //generates the line for the program counter
-  uint64_t value = state.PC;
-  generateLine(value, pc, outputString);  
+  generateLine(state.PC , pc, outputString);  
   char pstate[] = "PSTATE : "; //generates the line to be outputted for pstate
 
   if (state.PSTATE.N==1) { strcat(pstate, "N"); } else { strcat(pstate, "-"); }
@@ -143,16 +139,12 @@ void outputFile(char outputString[]) {
   if (state.PSTATE.C==1) { strcat(pstate, "C"); } else { strcat(pstate, "-"); }
   if (state.PSTATE.V==1) { strcat(pstate, "V\n"); } else { strcat(pstate, "-\n"); }
   strcat(outputString, pstate);
-
-  for (int i = 0; i < MEM_SIZE; i+=4) { //checks non-zero memory and adds it to the output string
+  strcat(outputString, "Non-Zero Memory:\n");
+  for (int i = 0; i < MEM_SIZE; i+=4) { //checks non-zero memory and adds it to the output string 
     if (state.memory[i] != 0 || state.memory[i+1] != 0 || state.memory[i+2] != 0 || state.memory[i+3] != 0) {
       char line[LINE_STR_LENGTH];
       sprintf(line, "0x%08X : ", i);
-      nonZeroGenerateLine(i+3, line);
-      nonZeroGenerateLine(i+2, line);
-      nonZeroGenerateLine(i+1, line);
       nonZeroGenerateLine(i, line);
-      strcat(line, "\n");
       strcat(outputString, line); //adds any to the output
     }
   }
