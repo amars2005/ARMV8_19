@@ -163,6 +163,7 @@ int main(int argc, char **argv) {
   int size = -1;
   while(codeLines[++size] != NULL) {}
   for (int i = 0; i < size; i++) {
+    printf("%s\n", codeLines[i]);
     free(codeLines[i]);
   }
   free(codeLines);
