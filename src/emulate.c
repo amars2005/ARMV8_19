@@ -383,17 +383,12 @@ uint64_t lsr32(uint64_t rn, int shift_amount) {
 }
 
 uint64_t asr32(uint64_t rn, int shift_amount) {
-  uint32_t lowerBits = (uint32_t) (rn & 0xFFFFFFFF);
-  uint32_t sign = lowerBits & 0x80000000;
-  for (int i = 0; i < shift_amount; i++) {
-    lowerBits >>= 1;
-    lowerBits |= sign;
-  }
-  return (uint64_t) lowerBits;
+  int32_t lowerBits = (int32_t) (rn & 0xFFFFFFFF);
+  return (uint64_t) (lowerBits >> shift_amount);
 }
 
 uint64_t ror32(uint64_t rn, int shift_amount) {
-  uint32_t lowerBits = (uint32_t) (rn & 0xFFFFFFFF);
+  int32_t lowerBits = (int32_t) (rn & 0xFFFFFFFF);
   for (int i = 0; i < shift_amount; i++) {
     uint32_t lsb = lowerBits & 0x00000001;
     lowerBits >>= 1;
@@ -415,12 +410,8 @@ uint64_t lsr64(uint64_t rn, int shift_amount) {
 }
 
 uint64_t asr64(uint64_t rn, int shift_amount) {
-  uint64_t sign = rn & 0x8000000000000000;
-  for (int i = 0; i < shift_amount; i++) {
-    rn >>= 1;
-    rn = rn | sign;
-  }
-  return rn;
+  int64_t rnSigned = (int64_t) rn;
+  return (rnSigned >> shift_amount);
 }
 
 uint64_t ror64(uint64_t rn, int shift_amount) {
@@ -441,26 +432,26 @@ uint64_t ror64(uint64_t rn, int shift_amount) {
 // Second input is the register mode (32 or 64 bit) represented by 0 and 1 respectively
 // Third input is the instruction type (lsl, lsr, asr, ror)
 // 0, 1, 2, 3 for lsl, lsr, asr, ror respectively
-uint64_t bitwiseShift(uint64_t rn, int mode, int instruction, int shift_amount) {
+typedef enum {lsl, lsr, asr, ror} shiftType;
+
+uint64_t bitwiseShift(uint64_t rn, int mode, shiftType instruction, int shift_amount) {
   assert(instruction >= 0 && instruction <= 3);
 
   assert(mode == 0 || mode == 1);
 
   if (mode == 0) {
     switch (instruction) {
-      case 0: return lsl32(rn, shift_amount);
-      case 1: return lsr32(rn, shift_amount);
-      case 2: return asr32(rn, shift_amount);
-      case 3: return ror32(rn, shift_amount);
-      default: exit(1);
+      case lsl: return lsl32(rn, shift_amount);
+      case lsr: return lsr32(rn, shift_amount);
+      case asr: return asr32(rn, shift_amount); 
+      case ror: return ror32(rn, shift_amount);
     }
   } else {
     switch (instruction) {
-      case 0: return lsl64(rn, shift_amount); 
-      case 1: return lsr64(rn, shift_amount); 
-      case 2: return asr64(rn, shift_amount); 
-      case 3: return ror64(rn, shift_amount);
-        default: exit(1);
+      case lsl: return lsl64(rn, shift_amount); 
+      case lsr: return lsr64(rn, shift_amount); 
+      case asr: return asr64(rn, shift_amount); 
+      case ror: return ror64(rn, shift_amount); 
     }
   }
 }
