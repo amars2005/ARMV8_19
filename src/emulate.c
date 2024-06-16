@@ -445,6 +445,9 @@ uint64_t bitwiseShift(uint64_t rn, int mode, shiftType instruction, int shift_am
       case lsr: return lsr32(rn, shift_amount);
       case asr: return asr32(rn, shift_amount); 
       case ror: return ror32(rn, shift_amount);
+      default:
+        fprintf(stderr, "Unknown shift\n");
+        exit(1);
     }
   } else {
     switch (instruction) {
@@ -452,7 +455,10 @@ uint64_t bitwiseShift(uint64_t rn, int mode, shiftType instruction, int shift_am
       case lsr: return lsr64(rn, shift_amount); 
       case asr: return asr64(rn, shift_amount); 
       case ror: return ror64(rn, shift_amount); 
-    }
+      default: 
+        fprintf(stderr, "Unknown shift\n");
+        exit(1);
+      }
   }
 }
 
