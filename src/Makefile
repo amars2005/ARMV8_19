@@ -8,11 +8,12 @@ LOADLIBES = -lm
 
 .PHONY: all clean
 
-all: assemble emulate
+all: assemble emulate tokenizer
 
 assemble: assemble.o
 emulate: emulate.o
+tokenizer: tokenizer.o
 
 clean:
-	$(RM) *.o assemble emulate
+	$(RM) *.o assemble emulate tokenizer
 	
