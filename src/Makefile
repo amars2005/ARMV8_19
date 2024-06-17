@@ -10,8 +10,8 @@ LOADLIBES = -lm
 
 all: assemble emulate
 
-assemble: assemble.c symbol_table.c
-	gcc $(CFLAGS) assemble.c symbol_table.c -o assemble
+assemble: assemble.c symbol_table.c branchingInstr.c
+	gcc $(CFLAGS) assemble.c symbol_table.c branchingInstr.c -o assemble
 emulate: emulate.o
 
 clean:
