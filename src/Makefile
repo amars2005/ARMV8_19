@@ -8,12 +8,12 @@ LOADLIBES = -lm
 
 .PHONY: all clean
 
-all: assemble emulate symbol_table
+all: assemble emulate
 
-assemble: assemble.o
+assemble: assemble.c symbol_table.c
+	gcc $(CFLAGS) assemble.c symbol_table.c -o assemble
 emulate: emulate.o
-symbol_table: symbol_table.o
 
 clean:
-	$(RM) *.o assemble emulate symbol_table
+	$(RM) *.o assemble emulate
 	

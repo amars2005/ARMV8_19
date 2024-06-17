@@ -3,26 +3,23 @@
 #include <regex.h>
 #include <inttypes.h>
 #include <string.h>
-// #include "symbol_table.h"
+#include "symbol_table.h"
 
-#define NEW_SYM_TABLE malloc(sizeof(symbolt))
-#define LABEL_BUFFER 50
 
 typedef struct {
     char label[LABEL_BUFFER];
     int   value;
 } LVPair;
 
-struct symbolt{
-    LVPair pair;
-    struct symbolt* next;
+struct symbolt_node{
+    LVPair* pair;
+    symbolt next;
 };
 
-typedef struct symbolt *symbolt;
-
 void addToTable(symbolt t, char* label, int value) {
-    LVPair pair = { .value = value };
-    strcpy(pair.label, label);
+    LVPair* pair = malloc(sizeof(LVPair));
+    pair->value = value;
+    strcpy(pair->label, label);
     while (t->next != NULL) {
         t = t->next;
     }
@@ -32,9 +29,10 @@ void addToTable(symbolt t, char* label, int value) {
 }
 
 int find(symbolt t, char* label) {
+    t = t->next;
     while (t != NULL) {
-        if (strcmp(label, t->pair.label) == 0) {
-            return t->pair.value;
+        if (strcmp(label, t->pair->label) == 0) {
+            return t->pair->value;
         }
         t = t->next;
     }
@@ -42,7 +40,7 @@ int find(symbolt t, char* label) {
     exit(1);
 }
 
-void fist_pass(symbolt t, char** lines) {
+void fistPass(symbolt t, char** lines) {
     char* label_regex_str = "[a-zA-Z_.][a-zA-Z0-9$_.]*:";
     regex_t label_regex;
     int value = regcomp(&label_regex, label_regex_str, 0);

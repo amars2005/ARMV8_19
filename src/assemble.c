@@ -1,5 +1,8 @@
 #include <stdlib.h>
-
+#include <stdio.h>
+#include <regex.h>
+#include <inttypes.h>
+#include "symbol_table.h"
 
 /*
 call example: ./assemble <file_in> <file_out> i.e. ./assemble add01.s add01.bin
@@ -24,5 +27,8 @@ strtok_r and strtol functions helpful here).
 • An implementation of the one or two-pass assembly process
 */
 int main(int argc, char **argv) {
+  symbolt t = NEW_SYM_TABLE;
+  addToTable(t, "loop", 2);
+  printf("%d\n", find(t, "loop"));
   return EXIT_SUCCESS;
 }
