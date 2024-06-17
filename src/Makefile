@@ -1,5 +1,5 @@
 CC      ?= gcc
-CFLAGS  ?= -std=c17 -g\
+CFLAGS  ?= -g -std=c17\
 	-D_POSIX_SOURCE -D_DEFAULT_SOURCE\
 	-Wall -Werror -pedantic
 LOADLIBES = -lm
@@ -10,7 +10,8 @@ LOADLIBES = -lm
 
 all: assemble emulate
 
-assemble: assemble.o
+assemble: assemble.c symbol_table.c
+	gcc $(CFLAGS) assemble.c symbol_table.c -o assemble
 emulate: emulate.o
 
 clean:

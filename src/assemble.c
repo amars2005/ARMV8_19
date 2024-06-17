@@ -2,10 +2,12 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <regex.h>
 #include <inttypes.h>
+#include <string.h>
 #include <assert.h>
 #include <stdbool.h>
+#include "symbol_table.h"
 
 // This is the size of buffer for loading in chars from input file
 // We will double the size if a line is greater than 64 chars
@@ -135,7 +137,6 @@ char **readFile(FILE *file) {
   free(buffer);
   lines[++index_lines] = NULL;
   return lines;
-
 }
 
 //void twoPass
