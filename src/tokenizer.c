@@ -13,7 +13,7 @@
 #define ZR 31
 #define EQUAL_STRS(a,b) (strcmp((a),(b)) == 0)
 
-static uint64_t apply_shift(bool sf, uint64_t rm, char* shift_str) {
+static uint64_t apply_shift(bool sf, uint64_t* rm, char* shift_str) {
     char shift_s[4];
     strncpy(shift_s, shift_str, 3);
 
@@ -29,9 +29,9 @@ static uint64_t apply_shift(bool sf, uint64_t rm, char* shift_str) {
     }
 
     char *endptr;
-    int amount = strtoull(shift_str + 5, &endptr, 10);
+    int amount = (int) strtol(shift_str + 5, &endptr, 10);
 
-    return bitwiseShift(rm, sf, shift, amount);
+    return bitwiseShift(*rm, sf, shift, amount);
 }
 
 static bool isLabel(char* line) {
@@ -127,14 +127,24 @@ static void logic_dprn_to_instruction(splitLine *data, uint64_t **operands_as_in
     inst->itype = logicDPRt;
 }
 
+static void multiply_dpr_to_instruction(splitLine *data, uint64_t **operands_as_ints, bool sf, instruction *inst, bool x) {
+    inst->instruction.multiplyDpr.sf = sf;
+    inst->instruction.multiplyDpr.Rd = operands_as_ints[0];
+    inst->instruction.multiplyDpr.Rn = operands_as_ints[1];
+    inst->instruction.multiplyDpr.Rm = operands_as_ints[2];
+    inst->instruction.multiplyDpr.Ra = operands_as_ints[3];
+    inst->instruction.multiplyDpr.X = x;
+}
+
 // Adds a new operand at zr_index that is the zero register, and shuffles the others up
 static void add_zr_and_shuffle(uint64_t **operands_as_ints, int num_ops, int zr_index) {
     // Shuffle
-    for(int i = num_ops; i >= zr_index; i-- ) {
+    for (int i = num_ops; i >= zr_index; i--) {
         operands_as_ints[i] = operands_as_ints[i - 1];
     }
     // Add zr
     *(operands_as_ints[zr_index]) = ZR;
+}
 
 static void assemble_wmov(splitLine *data, uint64_t **operands_as_ints, bool sf, instruction *inst, arithmeticDPI_t opc) {
     if (data->num_operands == 3) {
@@ -205,24 +215,17 @@ instruction line_to_instruction(splitLine *data) {
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, subs);
   } else if (EQUAL_STRS(data->opcode, "cmn")) {
       // Shuffle operands down so I can put ZR in
-      operands_as_ints[3] = operands_as_ints[2];
-      operands_as_ints[2] = operands_as_ints[1];
-      operands_as_ints[1] = operands_as_ints[0];
-      *operands_as_ints[0] = ZR;
+      add_zr_and_shuffle(operands_as_ints, 3, 0);
       // Now we can call the equivalent dp case
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, adds);
   } else if (EQUAL_STRS(data->opcode, "neg")) {
       // Shuffle operands down so I can put ZR in
-      operands_as_ints[3] = operands_as_ints[2];
-      operands_as_ints[2] = operands_as_ints[1];
-      *operands_as_ints[1] = ZR;
+      add_zr_and_shuffle(operands_as_ints, 3, 1);
       // Now we can call the equivalent dp case
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, sub);
   } else if (EQUAL_STRS(data->opcode, "negs")) {
       // Shuffle operands down so I can put ZR in
-      operands_as_ints[3] = operands_as_ints[2];
-      operands_as_ints[2] = operands_as_ints[1];
-      *operands_as_ints[1] = ZR;
+      add_zr_and_shuffle(operands_as_ints, 3, 1);
       // Now we can call the equivalent dp case
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, subs);
   } else if (EQUAL_STRS(data->opcode, "and")) {
@@ -243,10 +246,7 @@ instruction line_to_instruction(splitLine *data) {
       logic_dprn_to_instruction(data, operands_as_ints, sf, &inst, orn);
   } else if (EQUAL_STRS(data->opcode, "tst")) {
       // Shuffle operands down so I can put ZR in
-      operands_as_ints[3] = operands_as_ints[2];
-      operands_as_ints[2] = operands_as_ints[1];
-      operands_as_ints[1] = operands_as_ints[0];
-      *operands_as_ints[0] = ZR;
+      add_zr_and_shuffle(operands_as_ints, 3, 0);
       // Now we can call the equivalent dp case
       logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, ands);
   } else if (EQUAL_STRS(data->opcode, "mvn")) {
@@ -265,13 +265,15 @@ instruction line_to_instruction(splitLine *data) {
   } else if (EQUAL_STRS(data->opcode, "mov")) {
       TODO();
   } else if (EQUAL_STRS(data->opcode, "madd")) {
-      TODO();
+      multiply_dpr_to_instruction(data, operands_as_ints, sf, &inst, false);
   } else if (EQUAL_STRS(data->opcode, "msub")) {
-      TODO();
+      multiply_dpr_to_instruction(data, operands_as_ints, sf, &inst, true);
   } else if (EQUAL_STRS(data->opcode, "mul")) {
-      TODO();
+      *operands_as_ints[3] = ZR;
+      multiply_dpr_to_instruction(data, operands_as_ints, sf, &inst, false);
   } else if (EQUAL_STRS(data->opcode, "mneg")) {
-      TODO();
+      *operands_as_ints[3] = ZR;
+      multiply_dpr_to_instruction(data, operands_as_ints, sf, &inst, true);
   } else if (EQUAL_STRS(data->opcode, "b")) {
       int simm26 = operands_as_ints[0];
       unCondBranch(simm26);
