@@ -134,6 +134,7 @@ static void multiply_dpr_to_instruction(splitLine *data, uint64_t **operands_as_
     inst->instruction.multiplyDpr.Rm = operands_as_ints[2];
     inst->instruction.multiplyDpr.Ra = operands_as_ints[3];
     inst->instruction.multiplyDpr.X = x;
+    inst->itype = multiplyDPRt;
 }
 
 // Adds a new operand at zr_index that is the zero register, and shuffles the others up
