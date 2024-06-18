@@ -8,9 +8,10 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include "instruction-types.h"
+#include "sdthandler.h"
 
 
-instruction loadLiteralBuilder(uint8_t rt, char *address, uint8_t sf) {
+static instruction loadLiteralBuilder(uint8_t rt, char *address, uint8_t sf) {
     instruction inst;
     inst.itype = ll;
     instrData data;
@@ -30,7 +31,7 @@ instruction loadLiteralBuilder(uint8_t rt, char *address, uint8_t sf) {
     return inst;
 }
 
-instruction preIndexBuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
+static instruction preIndexBuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
     instruction inst;
     inst.itype = sdtIndex;
     instrData data;
@@ -84,7 +85,7 @@ instruction preIndexBuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
     return inst;
 }
 
-instruction postIndexBuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
+static instruction postIndexBuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
     instruction inst;
     inst.itype = sdtIndex;
     instrData data;
@@ -138,7 +139,7 @@ instruction postIndexBuilder(char *type, uint8_t rt, char *address, uint8_t sf) 
     return inst;
 } 
 
-instruction unsignedOffsetBuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
+static instruction unsignedOffsetBuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
     instruction inst;
     inst.itype = sdtUOffset;
     instrData data;
@@ -168,7 +169,7 @@ instruction unsignedOffsetBuilder(char *type, uint8_t rt, char *address, uint8_t
     uint32_t imm12 = atoi(imm12temp);
     free(imm12temp);
 
-    uoffset.imm12 = imm12;
+    uoffset.imm12 = imm12 >> (2 + sf);
 
     if (strcmp(type, "ldr") == 0) {
         uoffset.l = 1;
@@ -190,7 +191,7 @@ instruction unsignedOffsetBuilder(char *type, uint8_t rt, char *address, uint8_t
     return inst;
 }
 
-instruction registerOffsetBuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
+static instruction registerOffsetBuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
     instruction inst;
     inst.itype = sdtRegOffset;
     instrData data;
@@ -213,7 +214,7 @@ instruction registerOffsetBuilder(char *type, uint8_t rt, char *address, uint8_t
     uint64_t xm;
     if (address[commaIndex + 4] == ']') {
         char n[1] = {address[commaIndex + 3]};
-        xn = atoi(n);
+        xm = atoi(n);
     } else {
         char n[2] = {address[commaIndex + 3], address[commaIndex + 4]};
         xm = atoi(n);
@@ -253,4 +254,78 @@ instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
     } else {
         return postIndexBuilder(type, rt, address, sf);
     }
+}
+
+uint32_t LLBinary(LL literal) {
+    uint32_t instruction = 0;
+    instruction += (uint32_t) literal.Rt;
+    instruction += literal.simm19 << 5;
+    instruction += 3 << 27;
+    if (literal.sf == true) {
+        instruction += 1 << 30;
+    }
+    return instruction;
+}
+
+uint32_t indexBinary(SDTindex index) {
+    uint32_t instruction = 0;
+    instruction += (uint32_t) index.Rt;
+    instruction += (uint32_t) index.Xn << 5;
+    if (index.i == true) {
+        instruction += 3 << 10;
+    } else {
+        instruction += 1 << 10;
+    }
+    instruction += index.simm9 << 12;
+    if (index.l == true) {
+        instruction += 1 << 22;
+    }
+    instruction += 7 << 27;
+    if (index.sf == true) {
+        instruction += 3 << 30;
+    } else {
+        instruction += 2 << 30;
+    }
+
+    return instruction;
+}
+
+uint32_t uOffsetBinary(SDTuOffset uoffset) {
+    uint32_t instruction = 0;
+    instruction += (uint32_t) uoffset.Rt;
+    instruction += (uint32_t) uoffset.Xn << 5;
+    instruction += uoffset.imm12 << 10;
+    if (uoffset.l == true) {
+        instruction += 1 << 22;
+    }
+    instruction += 1 << 24;
+    instruction += 7 << 27;
+    if (uoffset.sf == true) {
+        instruction += 3 << 30;
+    } else {
+        instruction += 2 << 30;
+    }
+
+    return instruction;
+}
+
+uint32_t regOffsetBinary(SDTregOffset regoffset) {
+    uint32_t instruction = 0;
+    instruction += (uint32_t) regoffset.Rt;
+    instruction += (uint32_t) regoffset.Xn << 5;
+    instruction += 13 << 11;
+    instruction += (uint32_t) regoffset.Xm << 16;
+    if (regoffset.l == true) {
+        instruction += 3 << 21;
+    } else {
+        instruction += 1 << 21;
+    }
+    instruction += 7 << 27;
+    if (regoffset.sf == true) {
+        instruction += 3 << 30;
+    } else {
+        instruction += 2 << 30;
+    }
+
+    return instruction;
 }
