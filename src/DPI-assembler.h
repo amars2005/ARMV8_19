@@ -24,6 +24,8 @@
 #define N          ( 1 << 21)
 #define OP2(i)     ((i) << 10)
 
+#define IMM12_SIZE ((1 << 12) - 1)
+
 #define movn 0
 #define movz 2
 #define movk 3
@@ -33,7 +35,7 @@ typedef enum { andd, orr, eor, ands } logicDPR_t;
 typedef enum { bic, orn, eon, bics } logicDPRN_t;
 
 uint32_t assembleMultiply(char* opc, int rd, int rn, int rm, int ra, bool sf);
-uint32_t assembleArithmeticDPI(char* opc, int rd, int rn, int imm12, bool sh, bool sf);
-uint32_t assembleWideMoveDPI(char* opc, int rd, int imm16, int hw, bool sf);
+uint32_t assembleArithmeticDPI(char* opc, int rd, int rn, int imm12, bool sf);
+uint32_t assembleWideMoveDPI(char* opc, int rd, int imm16, bool sf);
 uint32_t assembleArithmeticDPR(char* opc, int rd, int rn, int rm, int shift, int op2, bool sf);
 uint32_t assembleLogicDPR(char* opc, int rd, int rn, int rm, int shift, int op2, bool sf);
