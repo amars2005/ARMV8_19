@@ -11,6 +11,27 @@
 
 #define EQUAL_STRS(a,b) (strcmp((a),(b)) == 0)
 
+static uint64_t apply_shift(bool sf, uint64_t rm, char* shift_str) {
+    char shift_s[4];
+    strncpy(shift_s, shift_str, 3);
+
+    shiftType shift;
+    if (EQUAL_STRS(shift_s, "lsl")) {
+        shift = lsl;
+    } else if (EQUAL_STRS(shift_s, "lsr")) {
+        shift = lsr;
+    } else if (EQUAL_STRS(shift_s, "asr")) {
+        shift = asr;
+    } else if (EQUAL_STRS(shift_s, "ror")) {
+        shift = ror;
+    }
+
+    char *endptr;
+    int amount = strtoull(shift_str + 5, &endptr, 10);
+
+    return bitwiseShift(rm, sf, shift, amount);
+}
+
 
 
 // Don't use with an empty string please
