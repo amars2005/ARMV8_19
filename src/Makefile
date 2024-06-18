@@ -1,5 +1,5 @@
 CC      ?= gcc
-CFLAGS  ?= -std=c17 -g\
+CFLAGS  ?= -g -std=c17\
 	-D_POSIX_SOURCE -D_DEFAULT_SOURCE\
 	-Wall -Werror -pedantic
 LOADLIBES = -lm

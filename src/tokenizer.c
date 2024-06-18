@@ -7,6 +7,7 @@
 #include "tokenizer.h"
 #include "instruction-types.h"
 #include "bitwise-shift.h"
+#include "sdthandler.c"
 
 // #include "symbol_table.h"
 
@@ -45,7 +46,6 @@ static bool isLabel(char* line) {
     }
 
     return (regexec(&label_regex, line, 0, NULL, 0) == REG_NOMATCH);
-}
 
 
 // Don't use with an empty string please
@@ -286,11 +286,27 @@ instruction line_to_instruction(splitLine *data) {
       char* cond = data->operands[1];
       condBranch(simm19, cond); 
   } else if (EQUAL_STRS(data->opcode, "ldr")) {
-      TODO();
+      uint8_t sf;
+      if (data->operands[0][0] == 'w') {
+          sf = 0;
+      } else {
+          sf = 1;
+      }
+      char *rtTemp = &data->operands[0][1];
+      uint8_t rt = (uint8_t) atoi(rtTemp);
+      return SDTbuilder("ldr", rt, data->operands[1], sf);
   } else if (EQUAL_STRS(data->opcode, "str")) {
-      TODO();
+      uint8_t sf;
+      if (data->operands[0][0] == 'w') {
+          sf = 0;
+      } else {
+          sf = 1;
+      }
+      char *rtTemp = &data->operands[0][1];
+      uint8_t rt = (uint8_t) atoi(rtTemp);
+      return SDTbuilder("str", rt, data->operands[1], sf);
   } else if (EQUAL_STRS(data->opcode, ".int")) {
-      TODO();
+      //TODO();
   }
   return inst;
 }
