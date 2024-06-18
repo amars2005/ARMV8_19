@@ -33,6 +33,4 @@ line_to_instruction takes a splitLine structure and returns the corresponding in
 */
 extern instruction line_to_instruction(splitLine *data);
 
-extern uint64_t *apply_shift(bool sf, uint64_t *first_half, char *second_half);
-
 #endif
