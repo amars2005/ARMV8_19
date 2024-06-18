@@ -2,17 +2,17 @@
 #include <string.h>
 #include <stdint.h>
 
-uint32_t unCondBranch(int simm26) {
+uint32_t assembleUnCondBranch(int simm26) {
     uint32_t return_val = ((5<<26) + simm26);
     return return_val;
 }
 
-uint32_t registerBranch(int xn) {
+uint32_t assembleRegisterBranch(int xn) {
     uint32_t return_val = (uint32_t) ((54815<<16)+(xn<<5));
     return return_val;
 }
 
-uint32_t condBranch(int simm19, char* cond) {
+uint32_t assembleCondBranch(int simm19, char* cond) {
     uint32_t return_val = (uint32_t) (21<<26) + (uint32_t) (simm19<<5);
     if (strcmp(cond, "EQ")) { return return_val; }
     else if (strcmp(cond, "NE")) { return return_val + 1; } 

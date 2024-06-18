@@ -7,8 +7,12 @@
 #include <string.h>
 #include <assert.h>
 #include <stdbool.h>
+
 #include "symbol_table.h"
 #include "branchingInstr.h"
+#include "tokenizer.h"
+#include "instruction-types.h"
+#include "DPI-assembler.h"
 
 // This is the size of buffer for loading in chars from input file
 // We will double the size if a line is greater than 64 chars
@@ -140,7 +144,44 @@ char **readFile(FILE *file) {
   return lines;
 }
 
-//void twoPass
+void secondPass(char** lines, uint32_t* instrs) {
+    for (int j = 0; lines[j] != NULL; j ++) {
+        splitLine l_splitLine = tokenize_line(lines[i]);
+        instruction i = line_to_instruction(l_splitLine);
+        switch (i.itype) {
+            case arithmeticDPIt:
+                instrs[j] = assembleArithmeticDPI(i.instruction.arithmeticDpi.opc, i.instruction.arithmeticDpi.Rd, i.instruction.arithmeticDpi.Rn, &i.instruction.arithmeticDpi.Op2, i.instruction.arithmeticDpi.sf);
+                break;
+            case wideMoveDPIt:
+                instrs[j] = assembleWideMoveDPI(i.instruction.wideMoveDpi.opc,i.instruction.wideMoveDpi.Rd, &i.instruction.wideMoveDpi.Op,&i.instruction.wideMoveDpi.hw, i.instruction.arithmeticDpi.sf);
+                break;
+            case arithmeticDPRt:
+                instrs[j] = assembleArithmeticDPR(i.instruction.arithmeticDpr.opc,i.instruction.arithmeticDpr.Rd, i.instruction.arithmeticDpr.Rn, &i.instruction.arithmeticDpr.Op2, i.instruction.arithmeticDpi.sf);
+                break;
+            case logicDPRt:
+                instrs[j] = assembleLogicDPR(i.instruction.logicDpr.opc,i.instruction.logicDpr.Rd, i.instruction.logicDpr.Rn, &i.instruction.logicDpr.Op2, i.instruction.logicDpr.sf);
+                break;
+            case multiplyDPRt:
+                instrs[j] = assembleMultiply(i.instruction.multiplyDpr.opc, i.instruction.multiplyDpr.Rd, i.instruction.multiplyDpr.Ra, i.instruction.multiplyDpr.Rn, i.instruction.multiplyDpr.Rm, i.instruction.multiplyDpr.sf);
+                break;
+            case brancht:
+                instrs[j] = assembleUnCondBranch(i.instruction.branch.offset);
+                break;
+            case bregt:
+                instrs[j] = assembleRegisterBranch(i.instruction.breg.Xn);
+                break;
+            case bcondt:
+                instrs[j] = assembleCondBranch(i.instruction.bcond.offset, i.instruction.bcond.cond);
+                break;
+            case sdt:
+                instrs[j] = assembleSDT(i.instruction.sdt.sf, i.instruction.sdt.u, i.instruction.sdt.l, i.instruction.sdt.offset, i.instruction.sdt.Xn, i.instruction.sdt.Rt);
+                break;
+            case ll:
+                instrs[j] =assembleLL(i.instruction.ll.sf, i.instruction.ll.simm19, i.instruction.ll.Rt);
+                break;
+        }
+    }
+}
 
 int main(int argc, char **argv) {
   // validate input arguments

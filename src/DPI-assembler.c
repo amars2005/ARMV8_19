@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
+#include <assert.h>
 #include "DPI-assembler.h"
 
 uint32_t assembleMultiply(char* opc, int rd, int rn, int rm, int ra, bool sf) {
@@ -12,7 +13,12 @@ uint32_t assembleMultiply(char* opc, int rd, int rn, int rm, int ra, bool sf) {
     return instr;
 }
 
-uint32_t assembleArithmeticDPI(char* opc, int rd, int rn, int imm12, bool sh, bool sf) {
+uint32_t assembleArithmeticDPI(char* opc, int rd, int rn, int imm12, bool sf) {
+    bool sh = false;
+    if (imm12 > IMM12_SIZE) {
+        imm12 >>= 12;
+        sh = true;
+    }
     uint32_t instr = SF(sf) + DPI + ARITHM_DPI + SH(sh) + IMM12(imm12) + RN(rn) + RD(rd);
     if (strcmp(opc, "add") == 0)  { instr += OPC(add); }
     if (strcmp(opc, "adds") == 0) { instr += OPC(adds); }
@@ -21,7 +27,14 @@ uint32_t assembleArithmeticDPI(char* opc, int rd, int rn, int imm12, bool sh, bo
     return instr;
 }
 
-uint32_t assembleWideMoveDPI(char* opc, int rd, int imm16, int hw, bool sf) {
+uint32_t assembleWideMoveDPI(char* opc, int rd, int imm16, bool sf) {
+    int hw = 0;
+    int mask = (1 << 16) - 1;
+    while ((imm16 & mask) == 0) {
+        hw ++;
+        imm16 >>= 16;
+    }
+    assert(hw < 4);
     uint32_t instr = SF(sf) + DPI + WMOVE_DPI + HW(hw) + IMM16(imm16) + RD(rd);
     if (strcmp(opc, "movn") == 0)  { instr += OPC(movn); }
     if (strcmp(opc, "movz") == 0)  { instr += OPC(movz); }
