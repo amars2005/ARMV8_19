@@ -1,21 +1,50 @@
 \documentclass[11pt]{article}
+\usepackage{graphicx} % Required for inserting images
 
-\usepackage{fullpage}
+\title{ARM Final Report Group 19}
+\author{Zachary Lazar, Serhii Popov, Adam Marshall, Arya Narang}
+\date{June 2024}
 
 \begin{document}
 
-\title{Our Extension...}
-\author{TODO}
-
 \maketitle
 
-\section{Introduction}
+\section{Implementation}
 
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor
-incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-culpa qui officia deserunt mollit anim id est laborum.
+% How you have structured and implemented your Assembler. (Please note that the Emulator has already been described
+% in the Interim Checkpoint document and should not be re-added here).
+We decided to reuse the instruction structs/unions from \texttt{emulator.c}, as this implementation was effective in part 1. We moved these data types to a new header file \texttt{instruction-types.h} to improve encapsulation. To recap, an \texttt{instruction} is a struct comprising an \texttt{instrData} union and a \texttt{instruction}\_t enum. the \texttt{instrData} field is a union of various structs, each of which represents a specific type of instruction, as different types of instruction require different fields. \texttt{instruction\_t} specifies the type of instruction.
+
+We chose the two~pass implementation of the assembler, as we decided it was likely to be more straightforward and result in a more effective solution. The two~pass implementation avoided the need to manage the symbol table structure directly, and allowed us to modularise more succinctly, since careful ordering of the code to avoid forward references was not necessary. To manage the symbol table, we built an abstract symbol table data structure in \texttt{symbol\_table.c}. This provided \texttt{addToTable},  \texttt{find} and \texttt{free} functions to carry out the necessary functionality.
+
+We implemented a function \texttt{readFile} in \texttt{assemble.c}, to read in an assembly file and return a list of strings. Each element in this list corresponds to a line of assembly. We wrote functions \texttt{tokenize\_line} and \texttt{line\_to\_instruction} in a new file \texttt{tokenizer.c}, to parse a line of assembly. \texttt{tokenize\_line} splits a line into opcode and operands into a new struct \texttt{splitLine}, and \texttt{line\_to\_instruction} takes a \texttt{splitLine} and returns the corresponding instruction struct, with its fields filled with the line's operands. We refactored the bitwise shift helper functions out of \texttt{emulate.c} into a new file \texttt{bitwise-shift.c}, for reuse in the assembler. The next task was to implement functionality to turn an instruction structure into binary output.
+[ADD STUFF HERE TO EXPLAIN HOW THIS WAS STRUCTURED]
+
+% How you have implemented Part III, i.e. making the green LED blink, on the provided Raspberry Pi.
+[ADD STUFF HERE TO EXPLAIN ADAM'S ASSEMBLY CODE]
+
+\section{Testing}
+
+% A description of how you have tested your implementation, and a discussion of how effective you
+% believe this testing to be.
+Some of the functions, \texttt{tokenize\_line} for instance, were lightly tested during development using the file's \texttt{main} function. This was helpful as it allowed us to be confident that the code was largely correct before it was merged into the master branch. [ADD STUFF HERE TO EXPLAIN HOW THE TEST SUITE WAS USED]
+
+\section{Collaboration}
+% "Be more descriptive on group feedback"
+% A group reflection on programming in a group. This should include a discussion on how effective
+% you believe your way of communicating and splitting work between the group was, and things you
+% would do differently or keep the same next time.
+We maintained the Instagram group chat we used to communicate during part~one, as it had proved key to our organisational successes. After reflecting on our experience collaborating during part~one, we decided to ensure we spent as much time as possible working together in person. We would keep this the same in a future project, since it allowed us to discuss in real time. For example, we were able to easily determine where in the program certain functionality belonged.
+
+Overall, we sometimes took too long to push our commits onto GitLab. This often left us in situations where we were waiting on the newest versions of group members' code in order to proceed with the next section. In future, we would ensure that our code was kept up-to-date with the version control system.
+
+Our method for splitting up the group work was perhaps not as effective as it could've been, as we largely decided who would implement which features of the spec on the fly. While it saved us time in some cases, this strategy meant we occasionally inadvertently duplicated code logic which had already been written.
+
+
+
+% Individual reflections (at least one paragraph per group member). Using your first Peer Assessment
+% feedback, and other experiences, reflect on how you feel you fitted into the group. For example, what
+% your strengths and weaknesses turned out to be compared to what you thought they might be or
+% things you would do differently or maintain when working with a different group of people.
 
 \end{document}
