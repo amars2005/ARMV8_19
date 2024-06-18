@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include "symbol_table.h"
+#include "branchingInstr.h"
 
 // This is the size of buffer for loading in chars from input file
 // We will double the size if a line is greater than 64 chars
