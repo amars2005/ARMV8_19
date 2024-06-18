@@ -151,19 +151,19 @@ void secondPass(char** lines, uint32_t* instrs) {
         instruction i = line_to_instruction(&l_splitLine);
         switch (i.itype) {
             case arithmeticDPIt:
-                instrs[j] = assembleArithmeticDPI(i.instruction.arithmeticDpi.opc, i.instruction.arithmeticDpi.Rd, i.instruction.arithmeticDpi.Rn, &i.instruction.arithmeticDpi.Op2, i.instruction.arithmeticDpi.sf);
+                instrs[j] = assembleArithmeticDPI(i.instruction.arithmeticDpi.opc, *i.instruction.arithmeticDpi.Rd, *i.instruction.arithmeticDpi.Rn, i.instruction.arithmeticDpi.Op2, i.instruction.arithmeticDpi.sf);
                 break;
             case wideMoveDPIt:
-                instrs[j] = assembleWideMoveDPI(i.instruction.wideMoveDpi.opc,i.instruction.wideMoveDpi.Rd, &i.instruction.wideMoveDpi.Op,&i.instruction.wideMoveDpi.hw, i.instruction.arithmeticDpi.sf);
+                instrs[j] = assembleWideMoveDPI(i.instruction.wideMoveDpi.opc, *i.instruction.wideMoveDpi.Rd, i.instruction.wideMoveDpi.Op, i.instruction.arithmeticDpi.sf);
                 break;
             case arithmeticDPRt:
-                instrs[j] = assembleArithmeticDPR(i.instruction.arithmeticDpr.opc,i.instruction.arithmeticDpr.Rd, i.instruction.arithmeticDpr.Rn, &i.instruction.arithmeticDpr.Op2, i.instruction.arithmeticDpi.sf);
+                instrs[j] = assembleArithmeticDPR(i.instruction.arithmeticDpr.opc, *i.instruction.arithmeticDpr.Rd, *i.instruction.arithmeticDpr.Rn, *i.instruction.arithmeticDpr.Rm, i.instruction.arithmeticDpr.Shift, i.instruction.arithmeticDpi.sf);
                 break;
             case logicDPRt:
-                instrs[j] = assembleLogicDPR(i.instruction.logicDpr.opc,i.instruction.logicDpr.Rd, i.instruction.logicDpr.Rn, &i.instruction.logicDpr.Op2, i.instruction.logicDpr.sf);
+                instrs[j] = assembleLogicDPR(i.instruction.logicDpr.opc, *i.instruction.logicDpr.Rd, *i.instruction.logicDpr.Rn, *i.instruction.logicDpr.Rm, i.instruction.logicDpr.Shift, i.instruction.logicDpr.N, i.instruction.logicDpr.sf);
                 break;
             case multiplyDPRt:
-                instrs[j] = assembleMultiply(i.instruction.multiplyDpr.opc, i.instruction.multiplyDpr.Rd, i.instruction.multiplyDpr.Ra, i.instruction.multiplyDpr.Rn, i.instruction.multiplyDpr.Rm, i.instruction.multiplyDpr.sf);
+                instrs[j] = assembleMultiply(i.instruction.multiplyDpr.X, *i.instruction.multiplyDpr.Rd, *i.instruction.multiplyDpr.Rn, *i.instruction.multiplyDpr.Rm, *i.instruction.multiplyDpr.Ra, i.instruction.multiplyDpr.sf);
                 break;
             case brancht:
                 instrs[j] = assembleUnCondBranch(i.instruction.branch.offset);

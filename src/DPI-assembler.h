@@ -6,7 +6,7 @@
 #define RN(i)      ((i) << 5)
 #define RA(i)      ((i) << 10)
 #define RM(i)      ((i) << 16)
-#define X          ((1) << 15)
+#define X_BIT      ((1) << 15)
 #define SF(i)      ((i) << 31)
 #define MUL        (27 << 24) // 11011
 #define DPI        ( 8 << 26)
@@ -21,7 +21,7 @@
 #define DPR        ( 5  << 25)
 #define SHIFT(i)   ((i) << 22)
 #define LOGIC_DPR  ( 0 )
-#define N          ( 1 << 21)
+#define N_BIT      ( 1 << 21)
 #define OP2(i)     ((i) << 10)
 
 #define IMM12_SIZE ((1 << 12) - 1)
@@ -31,11 +31,11 @@
 #define movk 3
 
 typedef enum { add, adds, sub, subs } arithmeticDPI_t;
-typedef enum { andd, orr, eor, ands } logicDPR_t;
+typedef enum { and, orr, eor, ands } logicDPR_t;
 typedef enum { bic, orn, eon, bics } logicDPRN_t;
 
-uint32_t assembleMultiply(char* opc, int rd, int rn, int rm, int ra, bool sf);
-uint32_t assembleArithmeticDPI(char* opc, int rd, int rn, int imm12, bool sf);
-uint32_t assembleWideMoveDPI(char* opc, int rd, int imm16, bool sf);
-uint32_t assembleArithmeticDPR(char* opc, int rd, int rn, int rm, int shift, int op2, bool sf);
-uint32_t assembleLogicDPR(char* opc, int rd, int rn, int rm, int shift, int op2, bool sf);
+extern uint32_t assembleMultiply(bool x, uint64_t rd, uint64_t rn, uint64_t rm, uint64_t ra, bool sf);
+extern uint32_t assembleArithmeticDPI(arithmeticDPI_t opc, uint64_t rd, uint64_t rn, uint64_t imm12, bool sf);
+extern uint32_t assembleWideMoveDPI(uint64_t opc, uint64_t rd, uint64_t imm16, bool sf);
+extern uint32_t assembleArithmeticDPR(arithmeticDPI_t opc, uint64_t rd, uint64_t rn, uint64_t rm, uint64_t shift, bool sf);
+extern uint32_t assembleLogicDPR(uint64_t opc, uint64_t rd, uint64_t rn, uint64_t rm, uint64_t shift, bool n, bool sf);
