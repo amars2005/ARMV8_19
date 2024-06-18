@@ -13,6 +13,7 @@
 #include "tokenizer.h"
 #include "instruction-types.h"
 #include "DPI-assembler.h"
+#include "sdthandler.h"
 
 // This is the size of buffer for loading in chars from input file
 // We will double the size if a line is greater than 64 chars
@@ -146,8 +147,8 @@ char **readFile(FILE *file) {
 
 void secondPass(char** lines, uint32_t* instrs) {
     for (int j = 0; lines[j] != NULL; j ++) {
-        splitLine l_splitLine = tokenize_line(lines[i]);
-        instruction i = line_to_instruction(l_splitLine);
+        splitLine l_splitLine = tokenize_line(lines[j], j*4);
+        instruction i = line_to_instruction(&l_splitLine);
         switch (i.itype) {
             case arithmeticDPIt:
                 instrs[j] = assembleArithmeticDPI(i.instruction.arithmeticDpi.opc, i.instruction.arithmeticDpi.Rd, i.instruction.arithmeticDpi.Rn, &i.instruction.arithmeticDpi.Op2, i.instruction.arithmeticDpi.sf);
@@ -168,7 +169,7 @@ void secondPass(char** lines, uint32_t* instrs) {
                 instrs[j] = assembleUnCondBranch(i.instruction.branch.offset);
                 break;
             case bregt:
-                instrs[j] = assembleRegisterBranch(i.instruction.breg.Xn);
+                instrs[j] = assembleRegisterBranch(*i.instruction.breg.Xn);
                 break;
             case bcondt:
                 instrs[j] = assembleCondBranch(i.instruction.bcond.offset, i.instruction.bcond.cond);
@@ -177,7 +178,7 @@ void secondPass(char** lines, uint32_t* instrs) {
                 instrs[j] = assembleSDT(i.instruction.sdt.sf, i.instruction.sdt.u, i.instruction.sdt.l, i.instruction.sdt.offset, i.instruction.sdt.Xn, i.instruction.sdt.Rt);
                 break;
             case ll:
-                instrs[j] =assembleLL(i.instruction.ll.sf, i.instruction.ll.simm19, i.instruction.ll.Rt);
+                instrs[j] = assembleLL(i.instruction.ll.sf, i.instruction.ll.simm19, i.instruction.ll.Rt);
                 break;
         }
     }
