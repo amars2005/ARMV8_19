@@ -8,12 +8,13 @@ LOADLIBES = -lm
 
 .PHONY: all clean
 
-all: assemble emulate
+all: assemble emulate tokenizer
 
 assemble: assemble.c symbol_table.c branchingInstr.c
 	gcc $(CFLAGS) assemble.c symbol_table.c branchingInstr.c -o assemble
 emulate: emulate.o
+tokenizer: tokenizer.o
 
 clean:
-	$(RM) *.o assemble emulate
+	$(RM) *.o assemble emulate tokenizer
 	
