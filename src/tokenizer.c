@@ -5,6 +5,7 @@
 
 #include "tokenizer.h"
 #include "instruction-types.h"
+#include "sdthandler.c"
 
 // #include "symbol_table.h"
 
@@ -26,6 +27,32 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
   // get all the operands
   int i = 0;
   cur_token = strtok_r(NULL, ", ", &leftover);
+
+  if (strcmp(opcode, "ldr") == 0 || strcmp(opcode, "str") == 0) {
+      int i = 0;
+      while (line_in[i] != ',') {
+          i++;
+      }
+      i += 2;
+      int addrIndex = i;
+      char address[MAX_OPERAND_LENGTH];
+      while (line_in[i] != '\0') {
+          address[i - addrIndex] = line_in[i];
+          i++;
+      }
+      address[i - addrIndex] = '\0';
+      i--;
+      while (line_in[i] == ' ') {
+          address[i - addrIndex] = '\0';
+          i--;
+      }
+      char operands2[MAX_OPERANDS][MAX_OPERAND_LENGTH];
+      strcpy(operands2[0], operands[0]);
+      strcpy(operands2[1], address);
+      splitLine tokens = {opcode, operands2, 2, instruction_address};
+      return tokens;
+  }
+
   while( cur_token != NULL ) {
     strcpy(operands[i], cur_token);
     cur_token = strtok_r(NULL, ", ", &leftover);
@@ -61,68 +88,84 @@ instruction line_to_instruction(splitLine *data) {
       char *op2 = data->operands[2];
 
   } else if (EQUAL_STRS(data->opcode, "adds")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "sub")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "subs")) {
-      TODO();
+      //TODO();
   }else if (EQUAL_STRS(data->opcode, "cmp")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "cmn")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "neg")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "negs")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "and")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "ands")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "bic")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "bics")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "eor")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "eon")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "orr")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "orn")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "tst")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "mvn")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "mov")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "movn")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "movk")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "movz")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "madd")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "msub")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "mul")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "mneg")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "b")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "br")) {
-      TODO();
+      //TODO();
   // Deal with b.ne b.eq etc here (it isn't exactly b.cond)
   } else if (EQUAL_STRS(data->opcode, "b.cond")) {
-      TODO();
+      //TODO();
   } else if (EQUAL_STRS(data->opcode, "ldr")) {
-      TODO();
+      uint8_t sf;
+      if (data->operands[0][0] == 'w') {
+          sf = 0;
+      } else {
+          sf = 1;
+      }
+      char *rtTemp = &data->operands[0][1];
+      uint8_t rt = (uint8_t) atoi(rtTemp);
+      return SDTbuilder("ldr", rt, data->operands[1], sf);
   } else if (EQUAL_STRS(data->opcode, "str")) {
-      TODO();
+      uint8_t sf;
+      if (data->operands[0][0] == 'w') {
+          sf = 0;
+      } else {
+          sf = 1;
+      }
+      char *rtTemp = &data->operands[0][1];
+      uint8_t rt = (uint8_t) atoi(rtTemp);
+      return SDTbuilder("str", rt, data->operands[1], sf);
   } else if (EQUAL_STRS(data->opcode, ".int")) {
-      TODO();
+      //TODO();
   }
 }
 
