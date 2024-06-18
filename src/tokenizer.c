@@ -5,10 +5,13 @@
 
 #include "tokenizer.h"
 #include "instruction-types.h"
+#include "bitwise-shift.h"
 
 // #include "symbol_table.h"
 
 #define EQUAL_STRS(a,b) (strcmp((a),(b)) == 0)
+
+
 
 // Don't use with an empty string please
 splitLine tokenize_line(char *line_in, int instruction_address) {
