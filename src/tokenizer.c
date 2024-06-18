@@ -60,6 +60,20 @@ static void assemble_arith_dp(splitLine *data, uint64_t **operands_as_ints, bool
     }
 }
 
+static void assemble_wmov(splitLine *data, uint64_t **operands_as_ints, bool sf, instruction *inst, arithmeticDPI_t opc) {
+    if (data->num_operands == 3) {
+        operands_as_ints[1] = apply_shift(sf, operands_as_ints[1], data->operands[2]);
+    }
+    if (data->operands[0] == '#') {
+        inst->instruction.arithmeticDpi.sf = sf;
+        inst->instruction.arithmeticDpi.Rd = operands_as_ints[0];
+        inst->instruction.arithmeticDpi.Rn = operands_as_ints[1];
+        inst->instruction.arithmeticDpi.Op2 = *operands_as_ints[2];
+        inst->instruction.arithmeticDpi.opc = opc;
+        inst->itype = arithmeticDPIt;
+    }
+}
+
 instruction line_to_instruction(splitLine *data) {
     // Convert the operands to integers
     uint64_t *operands_as_ints[MAX_OPERANDS];
@@ -134,13 +148,18 @@ instruction line_to_instruction(splitLine *data) {
       TODO();
   } else if (EQUAL_STRS(data->opcode, "mvn")) {
       TODO();
+  } else if (EQUAL_STRS(data->opcode, "movn") || EQUAL_STRS(data->opcode, "movk") || EQUAL_STRS(data->opcode, "movz")) {
+      char* opc = data->opcode;
+      int rd = operands_as_ints[0];
+      int imm16 = operands_as_ints[1];
+      int hw;
+      if (data->num_operands > 2) {
+        hw = operands_as_ints[2];
+      } else {
+        hw = 0
+      }
+      assembleWideMoveDPI(opc, rd, imm16, hw, sf);
   } else if (EQUAL_STRS(data->opcode, "mov")) {
-      TODO();
-  } else if (EQUAL_STRS(data->opcode, "movn")) {
-      TODO();
-  } else if (EQUAL_STRS(data->opcode, "movk")) {
-      TODO();
-  } else if (EQUAL_STRS(data->opcode, "movz")) {
       TODO();
   } else if (EQUAL_STRS(data->opcode, "madd")) {
       TODO();
@@ -151,12 +170,15 @@ instruction line_to_instruction(splitLine *data) {
   } else if (EQUAL_STRS(data->opcode, "mneg")) {
       TODO();
   } else if (EQUAL_STRS(data->opcode, "b")) {
-      TODO();
+      int simm26 = operands_as_ints[0];
+      unCondBranch(simm26);
   } else if (EQUAL_STRS(data->opcode, "br")) {
-      TODO();
-  // Deal with b.ne b.eq etc here (it isn't exactly b.cond)
-  } else if (EQUAL_STRS(data->opcode, "b.cond")) {
-      TODO();
+      int xn = operands_as_ints[0];
+      registerBranch(xn);
+  } else if (EQUAL_STRS(data->opcode, "b.eq") || EQUAL_STRS(data->opcode, "b.ne") || EQUAL_STRS(data->opcode, "b.ge") || EQUAL_STRS(data->opcode, "b.lt") || EQUAL_STRS(data->opcode, "b.gt") || EQUAL_STRS(data->opcode, "b.le") || EQUAL_STRS(data->opcode, "b.al")) {
+      int simm19 = operands_as_ints[0];
+      char* cond = data->operands[1];
+      condBranch(simm19, cond); 
   } else if (EQUAL_STRS(data->opcode, "ldr")) {
       TODO();
   } else if (EQUAL_STRS(data->opcode, "str")) {
