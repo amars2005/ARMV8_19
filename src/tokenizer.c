@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <regex.h>
 
 #include "tokenizer.h"
 #include "instruction-types.h"
@@ -32,6 +33,18 @@ static uint64_t apply_shift(bool sf, uint64_t rm, char* shift_str) {
     return bitwiseShift(rm, sf, shift, amount);
 }
 
+static bool isLabel(char* line) {
+    char* label_regex_str = "[a-zA-Z_.][a-zA-Z0-9$_.]*";
+    regex_t label_regex;
+    int value = regcomp(&label_regex, label_regex_str, 0);
+
+    if (value != 0) {
+        fprintf(stderr, "Regex compilation failed\n");
+        exit(1);
+    }
+
+    return (regexec(&label_regex, line, 0, NULL, 0) == REG_NOMATCH);
+}
 
 
 // Don't use with an empty string please
