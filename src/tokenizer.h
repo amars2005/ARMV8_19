@@ -7,7 +7,7 @@
 
 #define MAX_OPERANDS 10
 #define MAX_LINE_LENGTH 100
-#define MAX_OPERAND_LENGTH 10
+#define MAX_OPERAND_LENGTH 100
 #define MAX_OPCODE_LENGTH 10
 
 /* 
@@ -25,12 +25,14 @@ typedef struct {
 /*
 tokenise_line takes a well-formed non-empty string and splits it into a splitLine data structure
 */
-extern splitLine tokenize_line(char *line_in);
+extern splitLine tokenize_line(char *line_in, int instruction_address);
 
 /*
 line_to_instruction takes a splitLine structure and returns the corresponding instruction 
 (the opcode determines the precise type of instruction and the operands are the same)
 */
 extern instruction line_to_instruction(splitLine *data);
+
+extern uint64_t *apply_shift(bool sf, uint64_t *first_half, char *second_half);
 
 #endif
