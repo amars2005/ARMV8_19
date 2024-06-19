@@ -203,9 +203,9 @@ int main(int argc, char **argv) {
   FILE *assemblyFile = fopen(argv[1], "r");
   assert(assemblyFile != NULL);
 
-  char **codeLines = readFile(assemblyFile);
+  char **code_lines = readFile(assemblyFile);
 
-  if (codeLines != NULL) {
+  if (code_lines != NULL) {
     fclose(assemblyFile);
   } else {
     return EXIT_FAILURE;
@@ -213,12 +213,21 @@ int main(int argc, char **argv) {
   
   // Calculate size of codeLines and free memory at end
   int size = -1;
-  while(codeLines[++size] != NULL) {}
+  while(code_lines[++size] != NULL) {}
   for (int i = 0; i < size; i++) {
-    printf("%s\n", codeLines[i]);
-    free(codeLines[i]);
+    printf("%s\n", code_lines[i]);
+    free(code_lines[i]);
   }
-  free(codeLines);
+  free(code_lines);
+
+  symbolt symbol_table = NEW_SYM_TABLE;
+
+  firstPass(symbol_table, code_lines);
+
+  uint32_t instructions[size];
+  secondPass(code_lines, instructions, symbol_table);
+
+  
 
   return EXIT_SUCCESS;
 }
