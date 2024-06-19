@@ -250,14 +250,22 @@ int main(int argc, char **argv) {
   }
   free(code_lines);
 
+  // mallocs the symbol table
   symbolt symbol_table = NEW_SYM_TABLE;
 
+  // goes through every instruction and records the address of every label into the symbol table
   firstPass(symbol_table, code_lines);
 
+  // processes every instruction line and saves them in binary form inside an array of 32 bit ints
   uint32_t instructions[size];
   secondPass(code_lines, instructions, symbol_table);
 
-  
+  // convert all instructions to little endian
+  for (int i = 0; i < size; i++) {
+    instructions[i] = convertToLittleEndian(instructions[i]);
+  }
+
+  writeToBinFile(argv[2], instructions, size);
 
   return EXIT_SUCCESS;
 }
