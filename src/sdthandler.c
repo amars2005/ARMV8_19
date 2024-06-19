@@ -46,9 +46,7 @@ static instruction preIndexBuilder(char *type, uint8_t rt, char *address, uint8_
         index++;
     }
     simm9temp[index - hashtagIndex] = '\0';
-    printf("%s\n", simm9temp);
     uint32_t simm9 = atoi(simm9temp);
-    printf("%" PRIu32 "\n", simm9);
     free(simm9temp);
     
     preIndex.simm9 = simm9;
