@@ -8,12 +8,11 @@ LOADLIBES = -lm
 
 .PHONY: all clean
 
-all: assemble emulate tokenizer
+all: assemble emulate
 
-assemble: assemble.c symbol_table.c branchingInstr.c
-	gcc $(CFLAGS) assemble.c symbol_table.c branchingInstr.c -o assemble
+assemble: assemble.c tokenizer.c bitwise-shift.c
+	gcc $(CFLAGS) ./assemble.c ./bitwise-shift.c ./tokenizer.c -o assemble
 emulate: emulate.o
-tokenizer: tokenizer.o
 
 clean:
 	$(RM) *.o assemble emulate tokenizer

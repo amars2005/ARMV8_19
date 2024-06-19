@@ -1,6 +1,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+// Structs representing different instruction types
+
+typedef enum { arithmeticDPIt, wideMoveDPIt, arithmeticDPRt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdt, ll } instruction_t;
+typedef enum { add, adds, sub, subs } arithmeticDPI_t;
+typedef enum { and, orr, eor, ands} logicDPR_t;
+typedef enum { bic, orn, eon, bics} logicDPRN_t;
+
 typedef struct {
     bool      sf;
     uint64_t* Rd;
