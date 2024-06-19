@@ -7,8 +7,11 @@
 #include "tokenizer.h"
 #include "instruction-types.h"
 #include "bitwise-shift.h"
+#include "bitwise-shift.c"
 #include "sdthandler.h"
+#include "sdthandler.c"
 #include "symbol_table.h"
+#include "symbol_table.c"
 
 
 static uint64_t apply_shift(bool sf, uint64_t* rm, char* shift_str) {
@@ -47,6 +50,8 @@ static bool isLabel(char* line) {
 
 // Don't use with an empty string please
 splitLine tokenize_line(char *line_in, int instruction_address) {
+  char *line = (char *)malloc(MAX_LINE_LENGTH);
+  strcpy(line, line_in);
   char operands[MAX_OPERANDS][MAX_OPERAND_LENGTH];
   char opcode[MAX_OPCODE_LENGTH];
 
@@ -63,27 +68,30 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
   cur_token = strtok_r(NULL, ", ", &leftover);
 
   if (strcmp(opcode, "ldr") == 0 || strcmp(opcode, "str") == 0) {
-      int i = 0;
-      while (line_in[i] != ',') {
-          i++;
+      int j = 0;
+      while (line[j] != ',') {
+          j++;
       }
-      i += 2;
-      int addrIndex = i;
+      j += 2;
+      int addrIndex = j;
       char address[MAX_OPERAND_LENGTH];
-      while (line_in[i] != '\0') {
-          address[i - addrIndex] = line_in[i];
-          i++;
+      while (line[j] != '\0') {
+          address[j - addrIndex] = line_in[j];
+          j++;
       }
-      address[i - addrIndex] = '\0';
-      i--;
-      while (line_in[i] == ' ') {
-          address[i - addrIndex] = '\0';
-          i--;
+      address[j - addrIndex] = '\0';
+      j--;
+      while (line[j] == ' ') {
+          address[j - addrIndex] = '\0';
+          j--;
       }
       char operands2[MAX_OPERANDS][MAX_OPERAND_LENGTH];
-      strcpy(operands2[0], operands[0]);
+      strcpy(operands2[0], cur_token);
       strcpy(operands2[1], address);
       splitLine tokens = {opcode, operands2, 2, instruction_address};
+      printf("%s\n", opcode);
+      printf("%s\n", operands2[0]);
+      printf("%s\n", operands2[1]);
       return tokens;
   }
 
@@ -96,6 +104,7 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
   splitLine out = {opcode, operands, num_operands, instruction_address};
   return out;
 }
+
 
 static void arith_dp_to_instruction(splitLine *data, uint64_t **operands_as_ints, bool sf, instruction *inst, arithmeticDPI_t opc) {
     if( data->num_operands == 4 ) {
@@ -334,14 +343,34 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
   } else if (EQUAL_STRS(data->opcode, "ldr")) {
       char *rtTemp = &data->operands[0][1];
       uint8_t rt = (uint8_t) atoi(rtTemp);
-      inst = SDTbuilder("ldr", rt, data->operands[1], sf);
+      uint8_t sfInt;
+      if (sf == true) {
+        sfInt = 1;
+      } else {
+        sfInt = 0;
+      }
+      inst = SDTbuilder("ldr", rt, data->operands[1], sfInt);
   } else if (EQUAL_STRS(data->opcode, "str")) {
       char *rtTemp = &data->operands[0][1];
       uint8_t rt = (uint8_t) atoi(rtTemp);
-      inst = SDTbuilder("str", rt, data->operands[1], sf);
+      uint8_t sfInt;
+      if (sf == true) {
+        sfInt = 1;
+      } else {
+        sfInt = 0;
+      }
+      inst = SDTbuilder("str", rt, data->operands[1], sfInt);
   } else if (EQUAL_STRS(data->opcode, ".int")) {
       inst.itype = directive;
       inst.instruction.directive = *operands_as_ints[0];
   }
   return inst;
+}
+
+int main(void) {
+    char ldr[] = "mov x4, x3";
+    printf("Original instruction: %s\n", ldr);
+    splitLine line = tokenize_line(ldr, 1);
+    //printf("%s\n", tokens.opcode);
+    return 0;
 }
