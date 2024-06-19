@@ -6,6 +6,7 @@
 #include <string.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "symbol_table.h"
 #include "branchingInstr.h"
@@ -241,6 +242,13 @@ int main(int argc, char **argv) {
   } else {
     return EXIT_FAILURE;
   }
+
+  for(int i = 0; code_lines[i] != NULL; i++) {
+      if (strcmp(code_lines[i], "") == 0) {
+          code_lines[i] = NULL;
+      }
+  }
+
   // calculate the number of lines of code
     int size = -1;
     while(code_lines[++size] != NULL) {}

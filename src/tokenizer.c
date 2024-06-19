@@ -42,7 +42,7 @@ static bool isLabel(char* line) {
         exit(1);
     }
 
-    return (regexec(&label_regex, line, 0, NULL, 0) == REG_NOMATCH) && line[0] != '#' && line[0] != 'x' && line[0] != 'w';
+    return (regexec(&label_regex, line, 0, NULL, 0) == REG_NOMATCH) && line[0] != '#';
 }
 
 // Don't use with an empty string please
@@ -115,7 +115,7 @@ static void arith_dp_to_instruction(splitLine *data, uint64_t *operands_as_ints,
         inst->instruction.arithmeticDpr.sf = sf;
         inst->instruction.arithmeticDpr.Rd = &operands_as_ints[0];
         inst->instruction.arithmeticDpr.Rn = &operands_as_ints[1];
-        inst->instruction.arithmeticDpr.Op2 = operands_as_ints[2];
+        inst->instruction.arithmeticDpr.Rm = &operands_as_ints[2];
         inst->instruction.arithmeticDpr.opc = opc;
         inst->itype = arithmeticDPRt;
     }
