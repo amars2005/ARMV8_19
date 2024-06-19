@@ -5,17 +5,6 @@
 #include <string.h>
 #include "symbol_table.h"
 
-
-typedef struct {
-    char label[LABEL_BUFFER];
-    uint64_t   value;
-} LVPair;
-
-struct symbolt_node{
-    LVPair* pair;
-    symbolt next;
-};
-
 void addToTable(symbolt t, char* label, uint64_t value) {
     LVPair* pair = malloc(sizeof(LVPair));
     pair->value = value;
@@ -29,7 +18,6 @@ void addToTable(symbolt t, char* label, uint64_t value) {
 }
 
 uint64_t find(symbolt t, char* label) {
-    t = t->next;
     while (t != NULL) {
         if (strcmp(label, t->pair->label) == 0) {
             return t->pair->value;
