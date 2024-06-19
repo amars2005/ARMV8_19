@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <regex.h>
-
 #include "tokenizer.h"
 #include "instruction-types.h"
 #include "bitwise-shift.h"
@@ -345,11 +344,4 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
       inst.instruction.directive = *operands_as_ints[0];
   }
   return inst;
-}
-
-int main( void ) {
-  char arr1[] = "opc x0, x4, my_value";
-  char arr2[] = ".int 0x84834";
-  // tokenize_line(arr1);
-  // tokenize_line(arr2);
 }

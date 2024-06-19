@@ -1,6 +1,7 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "instruction-types.h"
 
 #define RD(i)      (i)
 #define RN(i)      ((i) << 5)
@@ -29,10 +30,6 @@
 #define movn 0
 #define movz 2
 #define movk 3
-
-typedef enum { add, adds, sub, subs } arithmeticDPI_t;
-typedef enum { and, orr, eor, ands } logicDPR_t;
-typedef enum { bic, orn, eon, bics } logicDPRN_t;
 
 extern uint32_t assembleMultiply(bool x, uint64_t rd, uint64_t rn, uint64_t rm, uint64_t ra, bool sf);
 extern uint32_t assembleArithmeticDPI(arithmeticDPI_t opc, uint64_t rd, uint64_t rn, uint64_t imm12, bool sf);

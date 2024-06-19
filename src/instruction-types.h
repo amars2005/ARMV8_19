@@ -1,3 +1,6 @@
+#ifndef INSTRUCTION_TYPES_H
+#define INSTRUCTION_TYPES_H
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -132,3 +135,5 @@ typedef struct {
     instrData     instruction;
     instruction_t itype;
 } instruction;
+
+#endif // INSTRUCTION_TYPES_H

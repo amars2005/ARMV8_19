@@ -40,7 +40,7 @@ uint64_t find(symbolt t, char* label) {
     exit(1);
 }
 
-void fistPass(symbolt t, char** lines) {
+void firstPass(symbolt t, char** lines) {
     char* label_regex_str = "[a-zA-Z_.][a-zA-Z0-9$_.]*:";
     regex_t label_regex;
     int value = regcomp(&label_regex, label_regex_str, 0);

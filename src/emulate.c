@@ -1,4 +1,3 @@
-#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -106,7 +105,7 @@ static void setup(void) {
 
 // returns the bits [start, end] of i
 static uint64_t bits(uint64_t i, int start, int end) {
-    return (((i) >> (start)) & ((uint32_t) pow(2, (end) - (start) + 1) - 1));
+    return (((i) >> (start)) & ((uint32_t) ((1 << ((end) - (start) + 1)) - 1)));
 }
 
 void generateLine(uint64_t value, char line[], char outputString[]) {
@@ -368,40 +367,6 @@ void regmSub(uint64_t *rd, const uint64_t *ra, const uint64_t *rn, const uint64_
     *rd = *ra - ((*rn) * (*rm));
   } else {
     *rd = (uint32_t) (*ra - ((*rn) * (*rm)));
-  }
-}
-
-
-// First input is the register number
-// Second input is the register mode (32 or 64 bit) represented by 0 and 1 respectively
-// Third input is the instruction type (lsl, lsr, asr, ror)
-// 0, 1, 2, 3 for lsl, lsr, asr, ror respectively
-
-uint64_t bitwiseShift(uint64_t rn, int mode, shiftType instruction, int shift_amount) {
-  assert(instruction >= 0 && instruction <= 3);
-
-  assert(mode == 0 || mode == 1);
-
-  if (mode == 0) {
-    switch (instruction) {
-      case lsl: return lsl32(rn, shift_amount);
-      case lsr: return lsr32(rn, shift_amount);
-      case asr: return asr32(rn, shift_amount); 
-      case ror: return ror32(rn, shift_amount);
-      default:
-        fprintf(stderr, "Unknown shift\n");
-        exit(1);
-    }
-  } else {
-    switch (instruction) {
-      case lsl: return lsl64(rn, shift_amount); 
-      case lsr: return lsr64(rn, shift_amount); 
-      case asr: return asr64(rn, shift_amount); 
-      case ror: return ror64(rn, shift_amount); 
-      default: 
-        fprintf(stderr, "Unknown shift\n");
-        exit(1);
-      }
   }
 }
 
