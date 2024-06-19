@@ -8,7 +8,7 @@
 
 typedef struct {
     char label[LABEL_BUFFER];
-    int   value;
+    uint64_t   value;
 } LVPair;
 
 struct symbolt_node{
@@ -16,7 +16,7 @@ struct symbolt_node{
     symbolt next;
 };
 
-void addToTable(symbolt t, char* label, int value) {
+void addToTable(symbolt t, char* label, uint64_t value) {
     LVPair* pair = malloc(sizeof(LVPair));
     pair->value = value;
     strcpy(pair->label, label);
@@ -28,7 +28,7 @@ void addToTable(symbolt t, char* label, int value) {
     t->next->next = NULL;
 }
 
-int find(symbolt t, char* label) {
+uint64_t find(symbolt t, char* label) {
     t = t->next;
     while (t != NULL) {
         if (strcmp(label, t->pair->label) == 0) {

@@ -1,4 +1,3 @@
-#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -145,10 +144,10 @@ char **readFile(FILE *file) {
   return lines;
 }
 
-void secondPass(char** lines, uint32_t* instrs) {
+void secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
     for (int j = 0; lines[j] != NULL; j ++) {
         splitLine l_splitLine = tokenize_line(lines[j], j*4);
-        instruction i = line_to_instruction(&l_splitLine);
+        instruction i = line_to_instruction(&l_splitLine, symbol_table);
         switch (i.itype) {
             case arithmeticDPIt:
                 instrs[j] = assembleArithmeticDPI(i.instruction.arithmeticDpi.opc, *i.instruction.arithmeticDpi.Rd, *i.instruction.arithmeticDpi.Rn, i.instruction.arithmeticDpi.Op2, i.instruction.arithmeticDpi.sf);
@@ -174,11 +173,20 @@ void secondPass(char** lines, uint32_t* instrs) {
             case bcondt:
                 instrs[j] = assembleCondBranch(i.instruction.bcond.offset, i.instruction.bcond.cond);
                 break;
-            case sdt:
-                instrs[j] = assembleSDT(i.instruction.sdt.sf, i.instruction.sdt.u, i.instruction.sdt.l, i.instruction.sdt.offset, i.instruction.sdt.Xn, i.instruction.sdt.Rt);
+            case sdtIndex:
+                instrs[j] = assembleIndexSDT(i.instruction.sdtindex);
+                break;
+            case sdtRegOffset:
+                instrs[j] = assembleRegOffsetSDT(i.instruction.sdtregoffset);
+                break;
+            case sdtUOffset:
+                instrs[j] = assembleUOffsetSDT(i.instruction.sdtuoffset);
                 break;
             case ll:
-                instrs[j] = assembleLL(i.instruction.ll.sf, i.instruction.ll.simm19, i.instruction.ll.Rt);
+                instrs[j] = assembleLL(i.instruction.ll);
+                break;
+            case directive:
+                instrs[j] = i.instruction.directive;
                 break;
         }
     }

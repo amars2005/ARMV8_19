@@ -1,6 +1,4 @@
-#include <math.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
@@ -256,7 +254,7 @@ instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
     }
 }
 
-uint32_t LLBinary(LL literal) {
+uint32_t assembleLL(LL literal) {
     uint32_t instruction = 0;
     instruction += (uint32_t) literal.Rt;
     instruction += literal.simm19 << 5;
@@ -267,7 +265,7 @@ uint32_t LLBinary(LL literal) {
     return instruction;
 }
 
-uint32_t indexBinary(SDTindex index) {
+uint32_t assembleIndexSDT(SDTindex index) {
     uint32_t instruction = 0;
     instruction += (uint32_t) index.Rt;
     instruction += (uint32_t) index.Xn << 5;
@@ -290,7 +288,7 @@ uint32_t indexBinary(SDTindex index) {
     return instruction;
 }
 
-uint32_t uOffsetBinary(SDTuOffset uoffset) {
+uint32_t assembleUOffsetSDT(SDTuOffset uoffset) {
     uint32_t instruction = 0;
     instruction += (uint32_t) uoffset.Rt;
     instruction += (uint32_t) uoffset.Xn << 5;
@@ -309,7 +307,7 @@ uint32_t uOffsetBinary(SDTuOffset uoffset) {
     return instruction;
 }
 
-uint32_t regOffsetBinary(SDTregOffset regoffset) {
+uint32_t assembleRegOffsetSDT(SDTregOffset regoffset) {
     uint32_t instruction = 0;
     instruction += (uint32_t) regoffset.Rt;
     instruction += (uint32_t) regoffset.Xn << 5;

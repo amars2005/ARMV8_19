@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,12 +8,9 @@
 #include "tokenizer.h"
 #include "instruction-types.h"
 #include "bitwise-shift.h"
-#include "sdthandler.c"
+#include "sdthandler.h"
+#include "symbol_table.h"
 
-// #include "symbol_table.h"
-
-#define ZR 31
-#define EQUAL_STRS(a,b) (strcmp((a),(b)) == 0)
 
 static uint64_t apply_shift(bool sf, uint64_t* rm, char* shift_str) {
     char shift_s[4];
@@ -46,7 +44,7 @@ static bool isLabel(char* line) {
     }
 
     return (regexec(&label_regex, line, 0, NULL, 0) == REG_NOMATCH);
-
+}
 
 // Don't use with an empty string please
 splitLine tokenize_line(char *line_in, int instruction_address) {
@@ -165,7 +163,7 @@ static void multiply_dpr_to_instruction(splitLine *data, uint64_t **operands_as_
 // Adds a new operand at zr_index that is the zero register, and shuffles the others up
 static void add_zr_and_shuffle(uint64_t **operands_as_ints, int num_ops, int zr_index) {
     // Shuffle
-    for (int i = num_ops; i >= zr_index; i--) {
+    for (int i = num_ops - 1; i >= zr_index; i--) {
         operands_as_ints[i] = operands_as_ints[i - 1];
     }
     // Add zr
@@ -174,9 +172,10 @@ static void add_zr_and_shuffle(uint64_t **operands_as_ints, int num_ops, int zr_
 
 static void assemble_wmov(splitLine *data, uint64_t **operands_as_ints, bool sf, instruction *inst, arithmeticDPI_t opc) {
     if (data->num_operands == 3) {
-        operands_as_ints[1] = apply_shift(sf, operands_as_ints[1], data->operands[2]);
+        uint64_t n = apply_shift(sf, operands_as_ints[1], data->operands[2]);
+        operands_as_ints[1] = &n;
     }
-    if (data->operands[0] == '#') {
+    if (data->operands[0][0] == '#') {
         inst->instruction.arithmeticDpi.sf = sf;
         inst->instruction.arithmeticDpi.Rd = operands_as_ints[0];
         inst->instruction.arithmeticDpi.Rn = operands_as_ints[1];
@@ -186,7 +185,7 @@ static void assemble_wmov(splitLine *data, uint64_t **operands_as_ints, bool sf,
     }
 }
 
-instruction line_to_instruction(splitLine *data) {
+instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
     // Convert the operands to integers
     uint64_t *operands_as_ints[MAX_OPERANDS];
     // Check if any of the operands are a label
@@ -195,7 +194,8 @@ instruction line_to_instruction(splitLine *data) {
         strcpy(cur_operand, (data->operands)[i]);
         if( isLabel(cur_operand) ) {
             // Get the address of the label
-            operands_as_ints[i] = find(SYMBOL_TABLE, cur_operand) - data->instruction_address;
+            uint64_t n = find(symbol_table, cur_operand) - data->instruction_address;
+            operands_as_ints[i] = &n;
         } else if( EQUAL_STRS((data->operands)[i], "xzr") || EQUAL_STRS((data->operands)[i], "wzr")) {
             // Zero register case
             *(operands_as_ints[i]) = ZR;
@@ -276,20 +276,18 @@ instruction line_to_instruction(splitLine *data) {
       // Now we can call the equivalent dp case
       logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, ands);
   } else if (EQUAL_STRS(data->opcode, "mvn")) {
-      TODO();
-  } else if (EQUAL_STRS(data->opcode, "movn") || EQUAL_STRS(data->opcode, "movk") || EQUAL_STRS(data->opcode, "movz")) {
-      char* opc = data->opcode;
-      int rd = operands_as_ints[0];
-      int imm16 = operands_as_ints[1];
-      int hw;
-      if (data->num_operands > 2) {
-        hw = operands_as_ints[2];
-      } else {
-        hw = 0
-      }
-      assembleWideMoveDPI(opc, rd, imm16, hw, sf);
+      add_zr_and_shuffle(operands_as_ints, 3, 1);
+      logic_dprn_to_instruction(data, operands_as_ints, sf, &inst, orn);
+  } else if (EQUAL_STRS(data->opcode, "movn")) {
+    //assemble_wmov(splitLine *data, uint64_t **operands_as_ints, bool sf, instruction *inst, arithmeticDPI_t opc)
+      assemble_wmov(data, operands_as_ints, sf, &inst, movn);
+  } else if (EQUAL_STRS(data->opcode, "movk")) {
+      assemble_wmov(data, operands_as_ints, sf, &inst, movk);
+  } else if (EQUAL_STRS(data->opcode, "movz")) {
+      assemble_wmov(data, operands_as_ints, sf, &inst, movz);
   } else if (EQUAL_STRS(data->opcode, "mov")) {
-      TODO();
+      add_zr_and_shuffle(operands_as_ints, 3, 1);
+      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, orr);
   } else if (EQUAL_STRS(data->opcode, "madd")) {
       multiply_dpr_to_instruction(data, operands_as_ints, sf, &inst, false);
   } else if (EQUAL_STRS(data->opcode, "msub")) {
@@ -301,37 +299,50 @@ instruction line_to_instruction(splitLine *data) {
       *operands_as_ints[3] = ZR;
       multiply_dpr_to_instruction(data, operands_as_ints, sf, &inst, true);
   } else if (EQUAL_STRS(data->opcode, "b")) {
-      int simm26 = operands_as_ints[0];
-      unCondBranch(simm26);
+      inst.itype = brancht;
+      inst.instruction.branch.offset = *operands_as_ints[0];
   } else if (EQUAL_STRS(data->opcode, "br")) {
-      int xn = operands_as_ints[0];
-      registerBranch(xn);
-  } else if (EQUAL_STRS(data->opcode, "b.eq") || EQUAL_STRS(data->opcode, "b.ne") || EQUAL_STRS(data->opcode, "b.ge") || EQUAL_STRS(data->opcode, "b.lt") || EQUAL_STRS(data->opcode, "b.gt") || EQUAL_STRS(data->opcode, "b.le") || EQUAL_STRS(data->opcode, "b.al")) {
-      int simm19 = operands_as_ints[0];
-      char* cond = data->operands[1];
-      condBranch(simm19, cond); 
+      inst.itype = bregt;
+      inst.instruction.breg.Xn = operands_as_ints[0];
+  } else if (EQUAL_STRS(data->opcode, "beq")) {
+      inst.itype = bcondt;
+      inst.instruction.bcond.offset = *operands_as_ints[0];
+      inst.instruction.bcond.cond   = EQ;
+  } else if (EQUAL_STRS(data->opcode, "bne")) {
+      inst.itype = bcondt;
+      inst.instruction.bcond.offset = *operands_as_ints[0];
+      inst.instruction.bcond.cond   = EQ;
+  } else if (EQUAL_STRS(data->opcode, "bge")) {
+      inst.itype = bcondt;
+      inst.instruction.bcond.offset = *operands_as_ints[0];
+      inst.instruction.bcond.cond   = GE;
+  } else if (EQUAL_STRS(data->opcode, "blt")) {
+      inst.itype = bcondt;
+      inst.instruction.bcond.offset = *operands_as_ints[0];
+      inst.instruction.bcond.cond   = LT;
+  } else if (EQUAL_STRS(data->opcode, "bgt")) {
+      inst.itype = bcondt;
+      inst.instruction.bcond.offset = *operands_as_ints[0];
+      inst.instruction.bcond.cond   = GT;
+  } else if (EQUAL_STRS(data->opcode, "ble")) {
+      inst.itype = bcondt;
+      inst.instruction.bcond.offset = *operands_as_ints[0];
+      inst.instruction.bcond.cond   = LE;
+  } else if (EQUAL_STRS(data->opcode, "bal")) {
+      inst.itype = bcondt;
+      inst.instruction.bcond.offset = *operands_as_ints[0];
+      inst.instruction.bcond.cond   = AL;
   } else if (EQUAL_STRS(data->opcode, "ldr")) {
-      uint8_t sf;
-      if (data->operands[0][0] == 'w') {
-          sf = 0;
-      } else {
-          sf = 1;
-      }
       char *rtTemp = &data->operands[0][1];
       uint8_t rt = (uint8_t) atoi(rtTemp);
-      return SDTbuilder("ldr", rt, data->operands[1], sf);
+      inst = SDTbuilder("ldr", rt, data->operands[1], sf);
   } else if (EQUAL_STRS(data->opcode, "str")) {
-      uint8_t sf;
-      if (data->operands[0][0] == 'w') {
-          sf = 0;
-      } else {
-          sf = 1;
-      }
       char *rtTemp = &data->operands[0][1];
       uint8_t rt = (uint8_t) atoi(rtTemp);
-      return SDTbuilder("str", rt, data->operands[1], sf);
+      inst = SDTbuilder("str", rt, data->operands[1], sf);
   } else if (EQUAL_STRS(data->opcode, ".int")) {
-      //TODO();
+      inst.itype = directive;
+      inst.instruction.directive = *operands_as_ints[0];
   }
   return inst;
 }

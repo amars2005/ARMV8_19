@@ -1,9 +1,19 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// Structs representing different instruction types
+#define movn 0
+#define movz 2
+#define movk 3
 
-typedef enum { arithmeticDPIt, wideMoveDPIt, arithmeticDPRt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdt, ll } instruction_t;
+#define EQ 0 // 0000
+#define NE 1 // 0001
+#define GE 10 // 1010
+#define LT 11 // 1011
+#define GT 12 // 1100
+#define LE 13 // 1101
+#define AL 14 // 1110
+
+typedef enum { arithmeticDPIt, wideMoveDPIt, arithmeticDPRt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdtUOffset, sdtIndex, sdtRegOffset, ll, directive } instruction_t;
 typedef enum { add, adds, sub, subs } arithmeticDPI_t;
 typedef enum { and, orr, eor, ands} logicDPR_t;
 typedef enum { bic, orn, eon, bics} logicDPRN_t;
@@ -101,10 +111,6 @@ typedef struct {
     uint64_t Rt;
 } LL;
 
-
-
-typedef enum { arithmeticDPIt, wideMoveDPIt, arithmeticDPRt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdtUOffset, sdtIndex, sdtRegOffset, ll } instruction_t;
-
 typedef union {
     arithmeticDPI arithmeticDpi;
     wideMoveDPI wideMoveDpi;
@@ -118,6 +124,7 @@ typedef union {
     SDTindex sdtindex;
     SDTregOffset sdtregoffset;
     LL ll;
+    uint64_t directive;
 } instrData;
 
 // Structs representing different instruction types

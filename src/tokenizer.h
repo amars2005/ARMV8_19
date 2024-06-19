@@ -2,13 +2,16 @@
 #define TOKENIZER_H
 
 #include <stdbool.h>
-
+#include "symbol_table.h"
 #include "instruction-types.h"
 
 #define MAX_OPERANDS 10
 #define MAX_LINE_LENGTH 100
 #define MAX_OPERAND_LENGTH 100
 #define MAX_OPCODE_LENGTH 10
+
+#define ZR 31
+#define EQUAL_STRS(a,b) (strcmp((a),(b)) == 0)
 
 /* 
 splitLine is a data structure which represents a line which has been tokenised 
@@ -31,6 +34,6 @@ extern splitLine tokenize_line(char *line_in, int instruction_address);
 line_to_instruction takes a splitLine structure and returns the corresponding instruction 
 (the opcode determines the precise type of instruction and the operands are the same)
 */
-extern instruction line_to_instruction(splitLine *data);
+extern instruction line_to_instruction(splitLine *data, symbolt symbol_table);
 
 #endif
