@@ -192,13 +192,44 @@ void secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
     }
 }
 
+// Converts each instruction to a uint32_t instruction stored in little Endian
+uint32_t convertToLittleEndian(uint32_t instruction) {
+  uint8_t bytes[4];
+  uint32_t LE_instruction = 0;
+  for (int i = 0; i < 4; i++) {
+    bytes[i] = (uint8_t) ((instruction >> (i * 8)) & 0xFF);
+    LE_instruction += bytes[i] << (24 - i * 8);
+  }
+  return LE_instruction;
+}
+
+// This writes all the instructions to a binary FILE
+// Ensure that you have converted each instruction to little Endian
+// before you parse it in to this function, all you have to do is
+// call the convertToLittleEndian function
+int writeToBinFile(char filename[], uint32_t instructions[], int size) {
+  FILE *binFile = fopen(filename, "wb");
+  if (binFile == NULL) {
+    return 1;
+  }
+
+  int elementsWritten = fwrite(instructions, sizeof(uint32_t), size, binFile);
+  if (elementsWritten != size) {
+      fclose(binFile);
+      return 2;
+  }
+
+  fclose(binFile);
+  return 0;
+}
+
 int main(int argc, char **argv) {
   // validate input arguments
   if (argc != 3) { 
     fprintf(stderr, "Usage: ./assemble <file_in> <file_out>\n");
     exit(1);
   }
-
+  
   // read in the assembly code so it can create symbol table
   FILE *assemblyFile = fopen(argv[1], "r");
   assert(assemblyFile != NULL);
@@ -215,7 +246,6 @@ int main(int argc, char **argv) {
   int size = -1;
   while(code_lines[++size] != NULL) {}
   for (int i = 0; i < size; i++) {
-    printf("%s\n", code_lines[i]);
     free(code_lines[i]);
   }
   free(code_lines);
