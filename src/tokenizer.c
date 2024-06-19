@@ -7,12 +7,8 @@
 #include "tokenizer.h"
 #include "instruction-types.h"
 #include "bitwise-shift.h"
-#include "bitwise-shift.c"
 #include "sdthandler.h"
-#include "sdthandler.c"
 #include "symbol_table.h"
-#include "symbol_table.c"
-
 
 static uint64_t apply_shift(bool sf, uint64_t* rm, char* shift_str) {
     char shift_s[4];
