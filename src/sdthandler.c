@@ -370,14 +370,3 @@ uint32_t assembleRegOffsetSDT(SDTregOffset regoffset) {
 
     return instruction;
 }
-
-int main(void) {
-    char type[] = "ldr";
-    uint8_t rt = 18;
-    char address[] = "[w6], #1234";
-    uint8_t sf = 0;
-    instruction sdt = SDTbuilder(type, rt, address, sf);
-    uint32_t binary = assembleIndexSDT(sdt.instruction.sdtindex);
-    printf("0x%x\n", binary);
-    return 0;
-}
