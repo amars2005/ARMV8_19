@@ -53,6 +53,7 @@ typedef struct {
     uint64_t* Rn;
     uint64_t* Rm;
     uint64_t Shift;
+    uint64_t Operand;
     uint64_t Op2;
     uint64_t opc;
     bool N;

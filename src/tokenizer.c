@@ -24,6 +24,9 @@ static uint64_t apply_shift(bool sf, uint64_t* rm, char* shift_str) {
         shift = asr;
     } else if (EQUAL_STRS(shift_s, "ror")) {
         shift = ror;
+    } else {
+        fprintf(stderr, "Invalid shift\n");
+        exit(1);
     }
 
     char *endptr;
@@ -121,31 +124,39 @@ static void arith_dp_to_instruction(splitLine *data, uint64_t *operands_as_ints,
     }
 }
 
-static void logic_dpr_to_instruction(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, logicDPR_t opc) {
-    if( data->num_operands == 4 ) {
-        uint64_t shifted = apply_shift(sf, &operands_as_ints[2], data->operands[3]);
-        operands_as_ints[2] = shifted;
+static void logic_dpr_to_instruction(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, uint64_t opc, bool n) {
+//    if( data->num_operands == 4 ) {
+//        uint64_t shifted = apply_shift(sf, &operands_as_ints[2], data->operands[3]);
+//        operands_as_ints[2] = shifted;
+//    }
+    char shift_s[4];
+    strncpy(shift_s, data->operands[3], 3);
+
+    shiftType shift;
+    if (EQUAL_STRS(shift_s, "lsl")) {
+        shift = lsl;
+    } else if (EQUAL_STRS(shift_s, "lsr")) {
+        shift = lsr;
+    } else if (EQUAL_STRS(shift_s, "asr")) {
+        shift = asr;
+    } else if (EQUAL_STRS(shift_s, "ror")) {
+        shift = ror;
+    } else {
+        fprintf(stderr, "Invalid shift\n");
+        exit(1);
     }
+
+    char *endptr;
+    int amount = (int) strtol(data->operands[3] + 5, &endptr, 10);
+
     inst->instruction.logicDpr.sf = sf;
     inst->instruction.logicDpr.Rd = &operands_as_ints[0];
     inst->instruction.logicDpr.Rn = &operands_as_ints[1];
     inst->instruction.logicDpr.Rm = &operands_as_ints[2];
+    inst->instruction.logicDpr.Shift = shift;
+    inst->instruction.logicDpr.Operand = amount;
     inst->instruction.logicDpr.opc = opc;
-    inst->instruction.logicDpr.N = false;
-    inst->itype = logicDPRt;
-}
-
-static void logic_dprn_to_instruction(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, logicDPRN_t opc) {
-    if( data->num_operands == 4 ) {
-        uint64_t shifted = apply_shift(sf, &operands_as_ints[2], data->operands[3]);
-        operands_as_ints[2] = shifted;
-    }
-    inst->instruction.logicDpr.sf = sf;
-    inst->instruction.logicDpr.Rd = &operands_as_ints[0];
-    inst->instruction.logicDpr.Rn = &operands_as_ints[1];
-    inst->instruction.logicDpr.Op2 = operands_as_ints[2];
-    inst->instruction.logicDpr.opc = opc;
-    inst->instruction.logicDpr.N = true;
+    inst->instruction.logicDpr.N = n;
     inst->itype = logicDPRt;
 }
 
@@ -252,29 +263,29 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
       // Now we can call the equivalent dp case
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, subs);
   } else if (EQUAL_STRS(data->opcode, "and")) {
-      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, and);
+      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, and, false);
   } else if (EQUAL_STRS(data->opcode, "ands")) {
-      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, ands);
+      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, ands, false);
   } else if (EQUAL_STRS(data->opcode, "bic")) {
-      logic_dprn_to_instruction(data, operands_as_ints, sf, &inst, bic);
+      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, bic, true);
   } else if (EQUAL_STRS(data->opcode, "bics")) {
-      logic_dprn_to_instruction(data, operands_as_ints, sf, &inst, bics);
+      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, bics, true);
   } else if (EQUAL_STRS(data->opcode, "eor")) {
-      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, eor);
+      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, eor, false);
   } else if (EQUAL_STRS(data->opcode, "eon")) {
-      logic_dprn_to_instruction(data, operands_as_ints, sf, &inst, eon);
+      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, eon, true);
   } else if (EQUAL_STRS(data->opcode, "orr")) {
-      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, orr);
+      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, orr, false);
   } else if (EQUAL_STRS(data->opcode, "orn")) {
-      logic_dprn_to_instruction(data, operands_as_ints, sf, &inst, orn);
+      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, orn, true);
   } else if (EQUAL_STRS(data->opcode, "tst")) {
       // Shuffle operands down so I can put ZR in
       add_zr_and_shuffle(operands_as_ints, 3, 0);
       // Now we can call the equivalent dp case
-      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, ands);
+      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, ands, false);
   } else if (EQUAL_STRS(data->opcode, "mvn")) {
       add_zr_and_shuffle(operands_as_ints, 3, 1);
-      logic_dprn_to_instruction(data, operands_as_ints, sf, &inst, orn);
+      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, orn, true);
   } else if (EQUAL_STRS(data->opcode, "movn")) {
     //assemble_wmov(splitLine *data, uint64_t **operands_as_ints, bool sf, instruction *inst, arithmeticDPI_t opc)
       assemble_wmov(data, operands_as_ints, sf, &inst, movn);
@@ -284,7 +295,7 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
       assemble_wmov(data, operands_as_ints, sf, &inst, movz);
   } else if (EQUAL_STRS(data->opcode, "mov")) {
       add_zr_and_shuffle(operands_as_ints, 3, 1);
-      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, orr);
+      logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, orr, false);
   } else if (EQUAL_STRS(data->opcode, "madd")) {
       multiply_dpr_to_instruction(data, operands_as_ints, sf, &inst, false);
   } else if (EQUAL_STRS(data->opcode, "msub")) {

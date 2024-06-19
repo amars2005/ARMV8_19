@@ -2,6 +2,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <string.h>
+#include <stdlib.h>
+#include "instruction-types.h"
 #include "DPI-assembler.h"
 
 uint32_t assembleMultiply(bool x, uint64_t rd, uint64_t rn, uint64_t rm, uint64_t ra, bool sf) {
@@ -37,8 +40,8 @@ uint32_t assembleArithmeticDPR(arithmeticDPI_t opc, uint64_t rd, uint64_t rn, ui
     return instr;
 }
 
-uint32_t assembleLogicDPR(uint64_t opc, uint64_t rd, uint64_t rn, uint64_t rm, uint64_t shift, bool n, bool sf) {
-    uint32_t instr = SF(sf) + DPR + LOGIC_DPR + OPC(opc) + RM(rm) + SHIFT(shift) + RN(rn) + RD(rd);
+uint32_t assembleLogicDPR(uint64_t opc, uint64_t rd, uint64_t rn, uint64_t rm, uint64_t shift, uint64_t operand, bool n, bool sf) {
+    uint32_t instr = SF(sf) + DPR + LOGIC_DPR + OPC(opc) + OPERAND(operand) + RM(rm) + SHIFT(shift) + RN(rn) + RD(rd);
     if (n) { instr += N_BIT; }
     return instr;
 }
