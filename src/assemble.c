@@ -243,6 +243,7 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
+  // remove empty lines
   for(int i = 0; code_lines[i] != NULL; i++) {
       if (strcmp(code_lines[i], "") == 0) {
           code_lines[i] = NULL;

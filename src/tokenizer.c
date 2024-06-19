@@ -129,7 +129,7 @@ static void logic_dpr_to_instruction(splitLine *data, uint64_t *operands_as_ints
     inst->instruction.logicDpr.sf = sf;
     inst->instruction.logicDpr.Rd = &operands_as_ints[0];
     inst->instruction.logicDpr.Rn = &operands_as_ints[1];
-    inst->instruction.logicDpr.Op2 = operands_as_ints[2];
+    inst->instruction.logicDpr.Rm = &operands_as_ints[2];
     inst->instruction.logicDpr.opc = opc;
     inst->instruction.logicDpr.N = false;
     inst->itype = logicDPRt;
