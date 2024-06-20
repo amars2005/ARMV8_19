@@ -204,6 +204,9 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
         } else if( isLabel(cur_operand)) {
             // Get the address of the label
             operands_as_ints[i] = find(symbol_table, cur_operand) - data->instruction_address;
+        } else if (!strcmp(data->opcode, ".int")) {
+            char *endptr;
+            operands_as_ints[i] = strtoull(cur_operand, &endptr, 10);
         }
         free(cur_operand);
     }
@@ -223,8 +226,13 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
             sf = 1;
             break;
           }
-          fprintf(stderr, "register type of first operand expected to be w or x\n");
-          exit(1);
+          if (strcmp(data->opcode, ".int")) {
+            fprintf(stderr, "register type of first operand expected to be w or x\n");
+            exit(1);
+          } else {
+            sf = false;
+            break;
+          }
   }
 
   // We need to deal with the case where op2 is a w register, x register or immediate
@@ -307,31 +315,31 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
   } else if (EQUAL_STRS(data->opcode, "br")) {
       inst.itype = bregt;
       inst.instruction.breg.Xn = &operands_as_ints[0];
-  } else if (EQUAL_STRS(data->opcode, "beq")) {
+  } else if (EQUAL_STRS(data->opcode, "b.eq")) {
       inst.itype = bcondt;
       inst.instruction.bcond.offset = operands_as_ints[0];
       inst.instruction.bcond.cond   = EQ;
-  } else if (EQUAL_STRS(data->opcode, "bne")) {
+  } else if (EQUAL_STRS(data->opcode, "b.ne")) {
       inst.itype = bcondt;
       inst.instruction.bcond.offset = operands_as_ints[0];
       inst.instruction.bcond.cond   = EQ;
-  } else if (EQUAL_STRS(data->opcode, "bge")) {
+  } else if (EQUAL_STRS(data->opcode, "b.ge")) {
       inst.itype = bcondt;
       inst.instruction.bcond.offset = operands_as_ints[0];
       inst.instruction.bcond.cond   = GE;
-  } else if (EQUAL_STRS(data->opcode, "blt")) {
+  } else if (EQUAL_STRS(data->opcode, "b.lt")) {
       inst.itype = bcondt;
       inst.instruction.bcond.offset = operands_as_ints[0];
       inst.instruction.bcond.cond   = LT;
-  } else if (EQUAL_STRS(data->opcode, "bgt")) {
+  } else if (EQUAL_STRS(data->opcode, "b.gt")) {
       inst.itype = bcondt;
       inst.instruction.bcond.offset = operands_as_ints[0];
       inst.instruction.bcond.cond   = GT;
-  } else if (EQUAL_STRS(data->opcode, "ble")) {
+  } else if (EQUAL_STRS(data->opcode, "b.le")) {
       inst.itype = bcondt;
       inst.instruction.bcond.offset = operands_as_ints[0];
       inst.instruction.bcond.cond   = LE;
-  } else if (EQUAL_STRS(data->opcode, "bal")) {
+  } else if (EQUAL_STRS(data->opcode, "b.al")) {
       inst.itype = bcondt;
       inst.instruction.bcond.offset = operands_as_ints[0];
       inst.instruction.bcond.cond   = AL;
