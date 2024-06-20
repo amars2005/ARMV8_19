@@ -284,7 +284,7 @@ int main(int argc, char **argv) {
     while(instructions[++size] != 0x0000008a) {}
     size++;
     
-    // convert all instrucftions to little endian
+    // convert all instructions to little endian
     for (int i = 0; i < size; i++) {
         instructions[i] = convertToLittleEndian(instructions[i]);
     }
