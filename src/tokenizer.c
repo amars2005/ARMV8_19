@@ -91,8 +91,9 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
   }
 
   while( cur_token != NULL ) {
+    if (cur_token[0] == ' ') { cur_token++; }
     strcpy(operands[i], cur_token);
-    cur_token = strtok_r(NULL, ", ", &leftover);
+    cur_token = strtok_r(NULL, ",", &leftover);
     i++;
   }
   int num_operands = i;
