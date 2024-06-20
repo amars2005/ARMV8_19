@@ -1,40 +1,30 @@
-.global _start
-_start:
-
-ldr x0, =0x3F200000 
-ldr x3, =0x3F20001C 
-ldr x5, =0x3f200028 
-
-ldr w1, x0          
-movz w2, #0b11100000000000, lsl #16                  
-bic w1, w1, w2  
-movz w2, #0b00100000000000, lsl #16      
-orr w1, w1, w2
+movz x0, #0x3f20, lsl #16
+movz w1, #0x8000
 str w1, [x0]
 
-loop:               
-ldr w1, x3          
-movz w2, #0x0
-movk w2, #0x4000, lsl #16    
-orr w1, w1, w2
+add x3, x0, #0x001c
+add x5, x0, #0x0028 
+
+movz w1, #0x20
+
+movz w6, #0
+
+high:
 str w1, [x3]
+movz w6, #1
+b set_delay
 
-movz x4, #0xFFFF
-movk x4, #0xFFFF, lsl #16     
-delay_loop:
-subs x4, x4, #1         
-bne delay_loop 
-
-ldr w1, x5          
-movz w2, #0x0 
-movk w2, #0x4000, lsl #16       
-orr w1, w1, w2
+low:
 str w1, [x5]
+movz w6, #0
 
-movz x4, #0xFFFF  
-movk x4, #0xFFFF, lsl #16    
-delay_loop2:
-subs x4, x4, #1         
-bne delay_loop2
+set_delay:
+movz w4, #0x50, lsl #16
 
-b loop
+delay_loop:
+subs w4, w4, #1         
+b.ne delay_loop 
+
+cmp w6, #0
+b.ne low
+b high
