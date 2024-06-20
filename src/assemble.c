@@ -158,7 +158,7 @@ void secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
                 instrs[j] = assembleWideMoveDPI(i.instruction.wideMoveDpi.opc, *i.instruction.wideMoveDpi.Rd, i.instruction.wideMoveDpi.Op, i.instruction.wideMoveDpi.hw, i.instruction.arithmeticDpi.sf);
                 break;
             case arithmeticDPRt:
-                instrs[j] = assembleArithmeticDPR(i.instruction.arithmeticDpr.opc, *i.instruction.arithmeticDpr.Rd, *i.instruction.arithmeticDpr.Rn, *i.instruction.arithmeticDpr.Rm, i.instruction.arithmeticDpr.Shift, i.instruction.arithmeticDpi.sf);
+                instrs[j] = assembleArithmeticDPR(i.instruction.arithmeticDpr.opc, *i.instruction.arithmeticDpr.Rd, *i.instruction.arithmeticDpr.Rn, *i.instruction.arithmeticDpr.Rm, i.instruction.arithmeticDpr.Shift, i.instruction.arithmeticDpr.Operand, i.instruction.arithmeticDpi.sf);
                 break;
             case logicDPRt:
                 instrs[j] = assembleLogicDPR(i.instruction.logicDpr.opc, *i.instruction.logicDpr.Rd, *i.instruction.logicDpr.Rn, *i.instruction.logicDpr.Rm, i.instruction.logicDpr.Shift, i.instruction.logicDpr.Operand, i.instruction.logicDpr.N, i.instruction.logicDpr.sf);

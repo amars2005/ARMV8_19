@@ -2,6 +2,7 @@
 #define TOKENIZER_H
 
 #include <stdbool.h>
+#include "bitwise-shift.h"
 #include "symbol_table.h"
 #include "instruction-types.h"
 
@@ -24,6 +25,11 @@ typedef struct {
     int num_operands;
     int instruction_address;
 } splitLine;
+
+typedef struct {
+    shiftType stype;
+    int amount;
+} shift;
 
 /*
 tokenise_line takes a well-formed non-empty string and splits it into a splitLine data structure
