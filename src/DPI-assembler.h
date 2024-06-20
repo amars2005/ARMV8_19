@@ -15,7 +15,7 @@
 #define SH(i)      ((i) << 22)
 #define IMM12(i)   ((i) << 10)
 #define OPC(i)     ((i) << 29)
-#define HW(i)      ((i) << 21)
+#define HW(i)      ((i/16) << 21)
 #define IMM16(i)   ((i) << 5)
 #define WMOVE_DPI  ((5) << 23)
 #define ARITHM_DPR ( 1  << 24)
