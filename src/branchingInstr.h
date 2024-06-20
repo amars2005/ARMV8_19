@@ -8,6 +8,11 @@
 #define LE 13 // 1101
 #define AL 14 // 1110
 
+#define LITTLE(i)  ((i & 0xFF) << 24) | \
+                   ((i & 0xFF00) << 8) | \
+                   ((i >> 8) & 0xFF00) | \
+                   (i >> 24);
+
 extern uint32_t assembleUnCondBranch(int simm26);
 extern uint32_t assembleRegisterBranch(uint64_t xn);
 extern uint32_t assembleCondBranch(int64_t simm19, int cond);
