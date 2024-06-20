@@ -2,8 +2,9 @@
 #define TOKENIZER_H
 
 #include <stdbool.h>
-#include "symbol_table.h"
-#include "instruction-types.h"
+//#include "symbol_table.h"
+//#include "instruction-types.h"
+#include "sdthandler.h"
 
 #define MAX_OPERANDS 10
 #define MAX_LINE_LENGTH 100

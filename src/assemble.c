@@ -8,12 +8,12 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "symbol_table.h"
+//#include "symbol_table.h"
 #include "branchingInstr.h"
 #include "tokenizer.h"
-#include "instruction-types.h"
+//#include "instruction-types.h"
 #include "DPI-assembler.h"
-#include "sdthandler.h"
+//#include "sdthandler.h"
 
 // This is the size of buffer for loading in chars from input file
 // We will double the size if a line is greater than 64 chars

@@ -5,11 +5,20 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <ctype.h>
-#include "instruction-types.h"
 #include "sdthandler.h"
 
 
-static instruction loadLiteralBuilder(uint8_t rt, char *address, uint8_t sf) {
+uint32_t checkHex(char *inp) {
+    uint32_t value;
+    if (inp[1] == 'x') {
+        value = (uint32_t) strtoul(inp + 2, NULL, 16);
+    } else {
+        value = atoi(inp);
+    }
+    return value;
+}
+
+static instruction loadLiteralBuilder(uint8_t rt, char *address, uint8_t sf, uint64_t *value) {
     instruction inst;
     inst.itype = ll;
     instrData data;
@@ -19,8 +28,13 @@ static instruction loadLiteralBuilder(uint8_t rt, char *address, uint8_t sf) {
     } else {
         literal.sf = true;
     }
-    char *simm19temp = address + 1;
-    uint32_t simm19 = atoi(simm19temp);
+    uint32_t simm19;
+    if (value == NULL) {
+        simm19 = checkHex(address + 1);
+    } else {
+        simm19 = (uint32_t) *value;
+    }
+    assert(simm19 % 4 == 0);
     literal.simm19 = simm19;
     literal.Rt = (uint64_t) rt;
     data.ll = literal;
@@ -66,25 +80,30 @@ static instruction zeroOffsetBuilder(char *type, uint8_t rt, char *address, uint
     return inst;
 }
 
-static instruction preIndexBuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
+static instruction preIndexBuilder(char *type, uint8_t rt, char *address, uint8_t sf, uint64_t *value) {
     instruction inst;
     inst.itype = sdtIndex;
     instrData data;
     SDTindex preIndex;
 
+    uint32_t simm9;
     int hashtagIndex = 0;
     while (address[hashtagIndex] != '#') {
         hashtagIndex++;
     }
-    char *simm9temp = (char *)malloc(strlen(address) - hashtagIndex);
-    int index = hashtagIndex + 1;
-    while (isdigit(address[index])) {
-        simm9temp[index - hashtagIndex - 1] = address[index];
-        index++;
+    if (value != NULL) {
+        simm9 = (uint32_t) *value;
+    } else {
+        char *simm9temp = (char *)malloc(strlen(address) - hashtagIndex);
+        int index = hashtagIndex + 1;
+        while (isalnum(address[index])) {
+            simm9temp[index - hashtagIndex - 1] = address[index];
+            index++;
+        }
+        simm9temp[index - hashtagIndex - 1] = '\0';
+        simm9 = (uint32_t) checkHex(simm9temp);
+        free(simm9temp);
     }
-    simm9temp[index - hashtagIndex] = '\0';
-    uint32_t simm9 = atoi(simm9temp);
-    free(simm9temp);
     
     preIndex.simm9 = simm9;
     preIndex.i = 1;
@@ -120,7 +139,7 @@ static instruction preIndexBuilder(char *type, uint8_t rt, char *address, uint8_
     return inst;
 }
 
-static instruction postIndexBuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
+static instruction postIndexBuilder(char *type, uint8_t rt, char *address, uint8_t sf, uint64_t *value) {
     instruction inst;
     inst.itype = sdtIndex;
     instrData data;
@@ -136,22 +155,27 @@ static instruction postIndexBuilder(char *type, uint8_t rt, char *address, uint8
     }
     postindex.Xn = xn;
 
+    uint32_t simm9;
     int hashtagIndex = 0;
     while (address[hashtagIndex] != '#') {
         hashtagIndex++;
     }
-    char *simm9temp = (char *)malloc(strlen(address) - hashtagIndex);
-    int index = hashtagIndex + 1;
-    while (isdigit(address[index])) {
-        simm9temp[index - hashtagIndex - 1] = address[index];
-        index++;
+    if (value != NULL) {
+        simm9 = (uint32_t) *value;
+    } else {
+        char *simm9temp = (char *)malloc(strlen(address) - hashtagIndex);
+        int index = hashtagIndex + 1;
+        while (address[index] != '\0') {
+            simm9temp[index - hashtagIndex - 1] = address[index];
+            index++;
+        }
+        simm9temp[index - hashtagIndex - 1] = '\0';
+        simm9 = (uint32_t) checkHex(simm9temp);
+        free(simm9temp);
     }
-    simm9temp[index - hashtagIndex] = '\0';
-    uint32_t simm9 = atoi(simm9temp);
-    free(simm9temp);
 
     postindex.simm9 = simm9;
-    postindex.i = 1;
+    postindex.i = 0;
     postindex.u = 0;
 
     if (strcmp(type, "ldr") == 0) {
@@ -174,7 +198,7 @@ static instruction postIndexBuilder(char *type, uint8_t rt, char *address, uint8
     return inst;
 } 
 
-static instruction unsignedOffsetBuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
+static instruction unsignedOffsetBuilder(char *type, uint8_t rt, char *address, uint8_t sf, uint64_t *value) {
     instruction inst;
     inst.itype = sdtUOffset;
     instrData data;
@@ -190,19 +214,24 @@ static instruction unsignedOffsetBuilder(char *type, uint8_t rt, char *address, 
     }
     uoffset.Xn = xn;
 
+    uint32_t imm12;
     int hashtagIndex = 0;
     while (address[hashtagIndex] != '#') {
         hashtagIndex++;
     }
-    char *imm12temp = (char *)malloc(strlen(address) - hashtagIndex);
-    int index = hashtagIndex + 1;
-    while (isdigit(address[index])) {
-        imm12temp[index - hashtagIndex - 1] = address[index];
-        index++;
+    if (value != NULL) {
+        imm12 = (uint32_t) *value;
+    } else {
+        char *imm12temp = (char *)malloc(strlen(address) - hashtagIndex);
+        int index = hashtagIndex + 1;
+        while (isalnum(address[index])) {
+            imm12temp[index - hashtagIndex - 1] = address[index];
+            index++;
+        }
+        imm12temp[index - hashtagIndex - 1] = '\0';
+        imm12 = (uint32_t) checkHex(imm12temp);
+        free(imm12temp);
     }
-    imm12temp[index - hashtagIndex] = '\0';
-    uint32_t imm12 = atoi(imm12temp);
-    free(imm12temp);
 
     uoffset.imm12 = imm12 >> (2 + sf);
 
@@ -272,26 +301,56 @@ static instruction registerOffsetBuilder(char *type, uint8_t rt, char *address, 
     regoffset.Rt = (uint64_t) rt;
     data.sdtregoffset = regoffset;
     inst.instruction = data;
-
+    
     return inst;
 }
 
-instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
+char *splitAlnum(char *address) {
+    if (address[0] == '[') {
+        char *pos = strchr(address, ',');
+        if (pos == NULL) {
+            return NULL;
+        } else {
+            return pos + 2;
+        }
+    } else if (address[0] == '#') {
+        return NULL;
+    } else {
+        return address;
+    }
+}
+
+instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf, symbolt table) {
     // Need to decode the type of address
     char hash = '#';
     int len = strlen(address);
-    if (address[0] == '#') {
-        return loadLiteralBuilder(rt, address, sf);
+    char *sndInput = splitAlnum(address);
+    char sndInputCheck[100]; strcpy(sndInputCheck, sndInput);
+    int inpLen = strlen(sndInput); int x = inpLen - 1;
+    while (isalnum(sndInputCheck[x]) == false) {
+        sndInputCheck[x] = '\0'; x--;
+    }
+    uint64_t value; uint64_t *valueAddr = NULL;
+    if (sndInputCheck != NULL) {
+        if (!((sndInputCheck[0] == 'w' || sndInputCheck[0] == 'x') && isdigit(sndInputCheck[1]) == true)) {
+            value = find(table, sndInputCheck);
+            valueAddr = &value;
+            //char str[100];
+            //sprintf(str, "%llu", value);
+        }
+    }
+    if (address[0] != '[') {
+        return loadLiteralBuilder(rt, address, sf, valueAddr);
     } else if (address[len - 1] == '!') {
-        return preIndexBuilder(type, rt, address, sf);
+        return preIndexBuilder(type, rt, address, sf, valueAddr);
     } else if (address[len - 1] == ']' && strchr(address, hash) != NULL) {
-        return unsignedOffsetBuilder(type, rt, address, sf);
+        return unsignedOffsetBuilder(type, rt, address, sf, valueAddr);
     } else if (address[strlen(address) - 1] == ']') {
         return registerOffsetBuilder(type, rt, address, sf);
     } else if (address[len - 1] == ']' && len < 6) {
         return zeroOffsetBuilder(type, rt, address, sf);
     } else {
-        return postIndexBuilder(type, rt, address, sf);
+        return postIndexBuilder(type, rt, address, sf, valueAddr);
     }
 }
 
