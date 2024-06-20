@@ -10,31 +10,6 @@
 #include "sdthandler.h"
 #include "symbol_table.h"
 
-
-static uint64_t apply_shift(bool sf, uint64_t* rm, char* shift_str) {
-    char shift_s[4];
-    strncpy(shift_s, shift_str, 3);
-
-    shiftType shift;
-    if (EQUAL_STRS(shift_s, "lsl")) {
-        shift = lsl;
-    } else if (EQUAL_STRS(shift_s, "lsr")) {
-        shift = lsr;
-    } else if (EQUAL_STRS(shift_s, "asr")) {
-        shift = asr;
-    } else if (EQUAL_STRS(shift_s, "ror")) {
-        shift = ror;
-    } else {
-        fprintf(stderr, "Invalid shift\n");
-        exit(1);
-    }
-
-    char *endptr;
-    int amount = (int) strtol(shift_str + 5, &endptr, 10);
-
-    return bitwiseShift(*rm, sf, shift, amount);
-}
-
 static bool isLabel(char* line) {
     char* label_regex_str = "[a-zA-Z_.][a-zA-Z0-9$_.]*";
     regex_t label_regex;
@@ -126,10 +101,6 @@ static void arith_dp_to_instruction(splitLine *data, uint64_t *operands_as_ints,
 }
 
 static void logic_dpr_to_instruction(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, uint64_t opc, bool n) {
-//    if( data->num_operands == 4 ) {
-//        uint64_t shifted = apply_shift(sf, &operands_as_ints[2], data->operands[3]);
-//        operands_as_ints[2] = shifted;
-//    }
     char shift_s[4];
     strncpy(shift_s, data->operands[3], 3);
 
@@ -188,7 +159,8 @@ static void assemble_wmov(splitLine *data, uint64_t *operands_as_ints, bool sf, 
     inst->instruction.wideMoveDpi.opc = opc;
     inst->itype = wideMoveDPIt;
     if (data->num_operands == 3) {
-        inst->instruction.wideMoveDpi.hw = operands_as_ints[2];
+        uint64_t hw = atoi(data->operands[2] + 5);
+        inst->instruction.wideMoveDpi.hw = hw;
     }
     else {
         inst->instruction.wideMoveDpi.hw = 0;

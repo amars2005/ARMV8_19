@@ -2,8 +2,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
-#include <string.h>
-#include <stdlib.h>
 #include "instruction-types.h"
 #include "DPI-assembler.h"
 

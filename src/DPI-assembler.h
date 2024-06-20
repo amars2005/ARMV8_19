@@ -34,6 +34,6 @@
 
 extern uint32_t assembleMultiply(bool x, uint64_t rd, uint64_t rn, uint64_t rm, uint64_t ra, bool sf);
 extern uint32_t assembleArithmeticDPI(arithmeticDPI_t opc, uint64_t rd, uint64_t rn, uint64_t imm12, bool sh, bool sf);
-extern uint32_t assembleWideMoveDPI(uint64_t opc, uint64_t rd, uint64_t imm16, bool sf);
+extern uint32_t assembleWideMoveDPI(uint64_t opc, uint64_t rd, uint64_t imm16, uint64_t hw, bool sf);
 extern uint32_t assembleArithmeticDPR(arithmeticDPI_t opc, uint64_t rd, uint64_t rn, uint64_t rm, uint64_t shift, bool sf);
 extern uint32_t assembleLogicDPR(uint64_t opc, uint64_t rd, uint64_t rn, uint64_t rm, uint64_t shift, uint64_t operand, bool n, bool sf);
