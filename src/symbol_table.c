@@ -52,4 +52,5 @@ void firstPass(symbolt t, char** lines) {
 
         addToTable(t, label, addr);
     }
+    regfree(&label_regex);
 }

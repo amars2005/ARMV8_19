@@ -36,4 +36,7 @@ line_to_instruction takes a splitLine structure and returns the corresponding in
 */
 extern instruction line_to_instruction(splitLine *data, symbolt symbol_table);
 
+extern bool isLabel(char* line);
+extern bool isLabelColon(char* line);
+
 #endif

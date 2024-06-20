@@ -146,8 +146,9 @@ char **readFile(FILE *file) {
 }
 
 void secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
-    for (int j = 0; lines[j] != NULL; j ++) {
-        splitLine l_splitLine = tokenize_line(lines[j], j*4);
+    int j = 0;
+    for (int k = 0; lines[k] != NULL; k ++) {
+        splitLine l_splitLine = tokenize_line(lines[k], k*4);
         instruction i = line_to_instruction(&l_splitLine, symbol_table);
         switch (i.itype) {
             case arithmeticDPIt:
@@ -189,7 +190,10 @@ void secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
             case directive:
                 instrs[j] = i.instruction.directive;
                 break;
+            case label:
+                continue;
         }
+        j++;
     }
 }
 

@@ -10,17 +10,26 @@
 #include "sdthandler.h"
 #include "symbol_table.h"
 
-static bool isLabel(char* line) {
-    char* label_regex_str = "[a-zA-Z_.][a-zA-Z0-9$_.]*";
+bool isLabel(char* line) {
+    char* label_regex_str = "^[a-zA-Z_.][a-zA-Z0-9$_.]*$";
     regex_t label_regex;
-    int value = regcomp(&label_regex, label_regex_str, 0);
+    int value = regcomp(&label_regex, label_regex_str, REG_EXTENDED);
 
     if (value != 0) {
         fprintf(stderr, "Regex compilation failed\n");
         exit(1);
     }
 
-    return (regexec(&label_regex, line, 0, NULL, 0) == REG_NOMATCH) && line[0] != '#';
+    bool ret = (regexec(&label_regex, line, 0, NULL, 0) != REG_NOMATCH);
+    regfree(&label_regex);
+    return ret;
+}
+
+bool isLabelColon(char *line) {
+    char copy[strlen(line) + 2];
+    strcpy(copy, line);
+    copy[strlen(line) - 1] = '\0';
+    return (isLabel(copy) && line[strlen(line)-1] == ':');
 }
 
 // Don't use with an empty string please
@@ -101,25 +110,30 @@ static void arith_dp_to_instruction(splitLine *data, uint64_t *operands_as_ints,
 }
 
 static void logic_dpr_to_instruction(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, uint64_t opc, bool n) {
-    char shift_s[4];
-    strncpy(shift_s, data->operands[3], 3);
-
     shiftType shift;
-    if (EQUAL_STRS(shift_s, "lsl")) {
-        shift = lsl;
-    } else if (EQUAL_STRS(shift_s, "lsr")) {
-        shift = lsr;
-    } else if (EQUAL_STRS(shift_s, "asr")) {
-        shift = asr;
-    } else if (EQUAL_STRS(shift_s, "ror")) {
-        shift = ror;
-    } else {
-        fprintf(stderr, "Invalid shift\n");
-        exit(1);
-    }
+    int       amount;
+    if (data->num_operands == 4) {
+        char shift_s[4];
+        strncpy(shift_s, data->operands[3], 3);
 
-    char *endptr;
-    int amount = (int) strtol(data->operands[3] + 5, &endptr, 10);
+        if (EQUAL_STRS(shift_s, "lsl")) {
+            shift = lsl;
+        } else if (EQUAL_STRS(shift_s, "lsr")) {
+            shift = lsr;
+        } else if (EQUAL_STRS(shift_s, "asr")) {
+            shift = asr;
+        } else if (EQUAL_STRS(shift_s, "ror")) {
+            shift = ror;
+        } else {
+            fprintf(stderr, "Invalid shift\n");
+            exit(1);
+        }
+        char *endptr;
+        amount = (int) strtol(data->operands[3] + 5, &endptr, 10);
+    } else {
+        shift = 0;
+        amount = 0;
+    }
 
     inst->instruction.logicDpr.sf = sf;
     inst->instruction.logicDpr.Rd = &operands_as_ints[0];
@@ -178,10 +192,8 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
     for( int i = 0; i < data->num_operands; i++ ) {
         char *cur_operand = malloc(MAX_OPERAND_LENGTH * sizeof(char));
         strcpy(cur_operand, (operands)[i]);
-        if( isLabel(cur_operand)) {
-            // Get the address of the label
-            operands_as_ints[i] = find(symbol_table, cur_operand) - data->instruction_address;
-        } else if( EQUAL_STRS((operands)[i], "xzr") || EQUAL_STRS((operands)[i], "wzr")) {
+
+        if( EQUAL_STRS((operands)[i], "xzr") || EQUAL_STRS((operands)[i], "wzr")) {
             // Zero register case
             operands_as_ints[i] = ZR;
         } else if (cur_operand[0] == 'x' || cur_operand[0] == 'w' || cur_operand[0] == '#') {
@@ -189,6 +201,9 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
             // Remove first character
             char *endptr;
             operands_as_ints[i] = strtoull(cur_operand + 1, &endptr, 10);
+        } else if( isLabel(cur_operand)) {
+            // Get the address of the label
+            operands_as_ints[i] = find(symbol_table, cur_operand) - data->instruction_address;
         }
         free(cur_operand);
     }
@@ -204,6 +219,10 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
           sf = true;
           break;
       default:
+          if (isLabel(operands[0]) || isLabelColon(data->opcode)) {
+            sf = 1;
+            break;
+          }
           fprintf(stderr, "register type of first operand expected to be w or x\n");
           exit(1);
   }
@@ -327,6 +346,8 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
   } else if (EQUAL_STRS(data->opcode, ".int")) {
       inst.itype = directive;
       inst.instruction.directive = operands_as_ints[0];
+  } else if (isLabelColon(data->opcode)) {
+      inst.itype = label;
   } else {
       fprintf(stderr, "unexpected opcode\n");
       exit(1);
