@@ -151,7 +151,7 @@ void secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
         instruction i = line_to_instruction(&l_splitLine, symbol_table);
         switch (i.itype) {
             case arithmeticDPIt:
-                instrs[j] = assembleArithmeticDPI(i.instruction.arithmeticDpi.opc, *i.instruction.arithmeticDpi.Rd, *i.instruction.arithmeticDpi.Rn, i.instruction.arithmeticDpi.Op2, i.instruction.arithmeticDpi.sf);
+                instrs[j] = assembleArithmeticDPI(i.instruction.arithmeticDpi.opc, *i.instruction.arithmeticDpi.Rd, *i.instruction.arithmeticDpi.Rn, i.instruction.arithmeticDpi.Op2, i.instruction.arithmeticDpi.sh, i.instruction.arithmeticDpi.sf);
                 break;
             case wideMoveDPIt:
                 instrs[j] = assembleWideMoveDPI(i.instruction.wideMoveDpi.opc, *i.instruction.wideMoveDpi.Rd, i.instruction.wideMoveDpi.Op, i.instruction.arithmeticDpi.sf);

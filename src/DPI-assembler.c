@@ -13,12 +13,7 @@ uint32_t assembleMultiply(bool x, uint64_t rd, uint64_t rn, uint64_t rm, uint64_
     return instr;
 }
 
-uint32_t assembleArithmeticDPI(arithmeticDPI_t opc, uint64_t rd, uint64_t rn, uint64_t imm12, bool sf) {
-    bool sh = false;
-    if (imm12 > IMM12_SIZE) {
-        imm12 >>= 12;
-        sh = true;
-    }
+uint32_t assembleArithmeticDPI(arithmeticDPI_t opc, uint64_t rd, uint64_t rn, uint64_t imm12, bool sh, bool sf) {
     uint32_t instr = SF(sf) + DPI + ARITHM_DPI + OPC(opc) + SH(sh) + IMM12(imm12) + RN(rn) + RD(rd);
     return instr;
 }

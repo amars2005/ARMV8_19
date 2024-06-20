@@ -23,6 +23,7 @@ typedef enum { bic, orn, eon, bics} logicDPRN_t;
 
 typedef struct {
     bool      sf;
+    bool      sh;
     uint64_t* Rd;
     uint64_t* Rn;
     uint64_t  Op2;

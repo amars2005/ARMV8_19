@@ -50,6 +50,8 @@ static bool isLabel(char* line) {
 
 // Don't use with an empty string please
 splitLine tokenize_line(char *line_in, int instruction_address) {
+  char *line = (char *)malloc(MAX_LINE_LENGTH);
+  strcpy(line, line_in);
   char operands[MAX_OPERANDS][MAX_OPERAND_LENGTH];
   char opcode[MAX_OPCODE_LENGTH];
 
@@ -84,7 +86,7 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
           i--;
       }
       char operands2[MAX_OPERANDS][MAX_OPERAND_LENGTH];
-      strcpy(operands2[0], operands[0]);
+      strcpy(operands2[0], cur_token);
       strcpy(operands2[1], address);
       splitLine tokens = {opcode, operands2, 2, instruction_address};
       return tokens;
@@ -102,16 +104,14 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
 }
 
 static void arith_dp_to_instruction(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, arithmeticDPI_t opc) {
-    if( data->num_operands == 4 ) {
-        uint64_t shifted = apply_shift(sf, &operands_as_ints[2], data->operands[3]);
-        operands_as_ints[2] = shifted;
-    }
+    bool sh = data->operands[3] + 5;
     char *op2 = data->operands[2];
     if( op2[0] == '#' ) {
         inst->instruction.arithmeticDpi.sf = sf;
         inst->instruction.arithmeticDpi.Rd = &operands_as_ints[0];
         inst->instruction.arithmeticDpi.Rn = &operands_as_ints[1];
         inst->instruction.arithmeticDpi.Op2 = operands_as_ints[2];
+        inst->instruction.arithmeticDpi.sh  = sh;
         inst->instruction.arithmeticDpi.opc = opc;
         inst->itype = arithmeticDPIt;
     }
@@ -199,17 +199,21 @@ static void assemble_wmov(splitLine *data, uint64_t *operands_as_ints, bool sf, 
 instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
     // Convert the operands to integers
     uint64_t operands_as_ints[MAX_OPERANDS];
+    char operands[MAX_OPERANDS][MAX_OPERAND_LENGTH];
+    for (int i = 0; i < data->num_operands; i++) {
+        strcpy(operands[i], data->operands[i]);
+    }
     // Check if any of the operands are a label
     for( int i = 0; i < data->num_operands; i++ ) {
         char *cur_operand = malloc(MAX_OPERAND_LENGTH * sizeof(char));
-        strcpy(cur_operand, (data->operands)[i]);
+        strcpy(cur_operand, (operands)[i]);
         if( isLabel(cur_operand)) {
             // Get the address of the label
             operands_as_ints[i] = find(symbol_table, cur_operand) - data->instruction_address;
-        } else if( EQUAL_STRS((data->operands)[i], "xzr") || EQUAL_STRS((data->operands)[i], "wzr")) {
+        } else if( EQUAL_STRS((operands)[i], "xzr") || EQUAL_STRS((operands)[i], "wzr")) {
             // Zero register case
             operands_as_ints[i] = ZR;
-        } else {
+        } else if (cur_operand[0] == 'x' || cur_operand[0] == 'w' || cur_operand[0] == '#') {
             // Convert it to an integer
             // Remove first character
             char *endptr;
@@ -221,7 +225,7 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
   // check first character to see whether its 32 or 64 bit
   bool sf;
 
-  switch( data->operands[0][0] ) {
+  switch( operands[0][0] ) {
       case 'w':
           sf = false;
           break;
