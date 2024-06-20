@@ -167,13 +167,17 @@ static void multiply_dpr_to_instruction(splitLine *data, uint64_t *operands_as_i
 }
 
 // Adds a new operand at zr_index that is the zero register, and shuffles the others up
-static void add_zr_and_shuffle(uint64_t *operands_as_ints, int num_ops, int zr_index) {
+static void add_zr_and_shuffle(uint64_t *operands_as_ints, splitLine *data, int zr_index, bool sf) {
     // Shuffle
-    for (int i = num_ops - 1; i >= zr_index; i--) {
+    for (int i = data->num_operands; i >= zr_index; i--) {
         operands_as_ints[i] = operands_as_ints[i - 1];
+        strcpy(data->operands[i], data->operands[i - 1]);
     }
+    data->num_operands++;
     // Add zr
     operands_as_ints[zr_index] = ZR;
+    if (sf) { strcpy(data->operands[zr_index], "xzr"); }
+    else { strcpy(data->operands[zr_index], "wzr"); }
 }
 
 static void assemble_wmov(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, int opc) {
@@ -258,22 +262,22 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, subs);
   } else if (EQUAL_STRS(data->opcode, "cmp")) {
       // Shuffle operands down so I can put ZR in
-      add_zr_and_shuffle(operands_as_ints, 3, 0);
+      add_zr_and_shuffle(operands_as_ints, data, 0, sf);
       // Now we can call the equivalent dp case
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, subs);
   } else if (EQUAL_STRS(data->opcode, "cmn")) {
       // Shuffle operands down so I can put ZR in
-      add_zr_and_shuffle(operands_as_ints, 3, 0);
+      add_zr_and_shuffle(operands_as_ints, data, 0, sf);
       // Now we can call the equivalent dp case
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, adds);
   } else if (EQUAL_STRS(data->opcode, "neg")) {
       // Shuffle operands down so I can put ZR in
-      add_zr_and_shuffle(operands_as_ints, 3, 1);
+      add_zr_and_shuffle(operands_as_ints, data, 1, sf);
       // Now we can call the equivalent dp case
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, sub);
   } else if (EQUAL_STRS(data->opcode, "negs")) {
       // Shuffle operands down so I can put ZR in
-      add_zr_and_shuffle(operands_as_ints, 3, 1);
+      add_zr_and_shuffle(operands_as_ints, data, 1, sf);
       // Now we can call the equivalent dp case
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, subs);
   } else if (EQUAL_STRS(data->opcode, "and")) {
@@ -294,11 +298,11 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
       logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, orn, true);
   } else if (EQUAL_STRS(data->opcode, "tst")) {
       // Shuffle operands down so I can put ZR in
-      add_zr_and_shuffle(operands_as_ints, 3, 0);
+      add_zr_and_shuffle(operands_as_ints, data, 0, sf);
       // Now we can call the equivalent dp case
       logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, ands, false);
   } else if (EQUAL_STRS(data->opcode, "mvn")) {
-      add_zr_and_shuffle(operands_as_ints, 3, 1);
+      add_zr_and_shuffle(operands_as_ints, data, 1, sf);
       logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, orn, true);
   } else if (EQUAL_STRS(data->opcode, "movn")) {
     //assemble_wmov(splitLine *data, uint64_t **operands_as_ints, bool sf, instruction *inst, arithmeticDPI_t opc)
@@ -308,7 +312,7 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
   } else if (EQUAL_STRS(data->opcode, "movz")) {
       assemble_wmov(data, operands_as_ints, sf, &inst, movz);
   } else if (EQUAL_STRS(data->opcode, "mov")) {
-      add_zr_and_shuffle(operands_as_ints, 3, 1);
+      add_zr_and_shuffle(operands_as_ints, data, 1, sf);
       logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, orr, false);
   } else if (EQUAL_STRS(data->opcode, "madd")) {
       multiply_dpr_to_instruction(data, operands_as_ints, sf, &inst, false);
