@@ -28,8 +28,8 @@ uint32_t assembleWideMoveDPI(uint64_t opc, uint64_t rd, uint64_t imm16, uint64_t
     return instr;
 }
 
-uint32_t assembleArithmeticDPR(arithmeticDPI_t opc, uint64_t rd, uint64_t rn, uint64_t rm, uint64_t shift, bool sf) {
-    uint32_t instr = SF(sf) + DPR + ARITHM_DPR + OPC(opc) + RM(rm) + SHIFT(shift) + RN(rn) + RD(rd);
+uint32_t assembleArithmeticDPR(arithmeticDPI_t opc, uint64_t rd, uint64_t rn, uint64_t rm, uint64_t shift, uint64_t operand, bool sf) {
+    uint32_t instr = SF(sf) + DPR + ARITHM_DPR + OPC(opc) + RM(rm) + SHIFT(shift) + OPERAND(operand) + RN(rn) + RD(rd);
     return LITTLE(instr);
 }
 

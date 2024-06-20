@@ -32,6 +32,37 @@ bool isLabelColon(char *line) {
     return (isLabel(copy) && line[strlen(line)-1] == ':');
 }
 
+static shift workoutShift(char* operand, int num_operands) {
+    shiftType shiftt;
+    int       amount;
+    if (num_operands == 4) {
+        char shift_s[4];
+        strncpy(shift_s, operand, 3);
+
+        if (EQUAL_STRS(shift_s, "lsl")) {
+            shiftt = lsl;
+        } else if (EQUAL_STRS(shift_s, "lsr")) {
+            shiftt = lsr;
+        } else if (EQUAL_STRS(shift_s, "asr")) {
+            shiftt = asr;
+        } else if (EQUAL_STRS(shift_s, "ror")) {
+            shiftt = ror;
+        } else {
+            fprintf(stderr, "Invalid shift\n");
+            exit(1);
+        }
+        char *endptr;
+        operand += 5;
+        if (operand[1] == 'x') { amount = strtoull(operand, &endptr, 0); }
+        else { amount = (int) strtol(operand, &endptr, 10); }
+    } else {
+        shiftt = 0;
+        amount = 0;
+    }
+    shift s = { .stype = shiftt, .amount = amount };
+    return s;
+}
+
 // Don't use with an empty string please
 splitLine tokenize_line(char *line_in, int instruction_address) {
   char *line = (char *)malloc(MAX_LINE_LENGTH);
@@ -88,9 +119,8 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
 }
 
 static void arith_dp_to_instruction(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, arithmeticDPI_t opc) {
-    bool sh = !strcmp(data->operands[3], "lsl #12");
-    char *op2 = data->operands[2];
-    if( op2[0] == '#' ) {
+    if( data->operands[2][0] == '#' ) {
+        bool sh = !strcmp(data->operands[3], "lsl #12");
         inst->instruction.arithmeticDpi.sf = sf;
         inst->instruction.arithmeticDpi.Rd = &operands_as_ints[0];
         inst->instruction.arithmeticDpi.Rn = &operands_as_ints[1];
@@ -100,47 +130,27 @@ static void arith_dp_to_instruction(splitLine *data, uint64_t *operands_as_ints,
         inst->itype = arithmeticDPIt;
     }
     else {
+        shift shift = workoutShift(data->operands[3], data->num_operands);
         inst->instruction.arithmeticDpr.sf = sf;
         inst->instruction.arithmeticDpr.Rd = &operands_as_ints[0];
         inst->instruction.arithmeticDpr.Rn = &operands_as_ints[1];
         inst->instruction.arithmeticDpr.Rm = &operands_as_ints[2];
+        inst->instruction.arithmeticDpr.Shift = shift.stype;
+        inst->instruction.arithmeticDpr.Operand = shift.amount;
         inst->instruction.arithmeticDpr.opc = opc;
         inst->itype = arithmeticDPRt;
     }
 }
 
 static void logic_dpr_to_instruction(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, uint64_t opc, bool n) {
-    shiftType shift;
-    int       amount;
-    if (data->num_operands == 4) {
-        char shift_s[4];
-        strncpy(shift_s, data->operands[3], 3);
-
-        if (EQUAL_STRS(shift_s, "lsl")) {
-            shift = lsl;
-        } else if (EQUAL_STRS(shift_s, "lsr")) {
-            shift = lsr;
-        } else if (EQUAL_STRS(shift_s, "asr")) {
-            shift = asr;
-        } else if (EQUAL_STRS(shift_s, "ror")) {
-            shift = ror;
-        } else {
-            fprintf(stderr, "Invalid shift\n");
-            exit(1);
-        }
-        char *endptr;
-        amount = (int) strtol(data->operands[3] + 5, &endptr, 10);
-    } else {
-        shift = 0;
-        amount = 0;
-    }
+    shift shift = workoutShift(data->operands[3], data->num_operands);
 
     inst->instruction.logicDpr.sf = sf;
     inst->instruction.logicDpr.Rd = &operands_as_ints[0];
     inst->instruction.logicDpr.Rn = &operands_as_ints[1];
     inst->instruction.logicDpr.Rm = &operands_as_ints[2];
-    inst->instruction.logicDpr.Shift = shift;
-    inst->instruction.logicDpr.Operand = amount;
+    inst->instruction.logicDpr.Shift = shift.stype;
+    inst->instruction.logicDpr.Operand = shift.amount;
     inst->instruction.logicDpr.opc = opc;
     inst->instruction.logicDpr.N = n;
     inst->itype = logicDPRt;
