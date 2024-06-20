@@ -4,11 +4,13 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <regex.h>
+#include <ctype.h>
 #include "tokenizer.h"
 #include "instruction-types.h"
 #include "bitwise-shift.h"
 #include "sdthandler.h"
 #include "symbol_table.h"
+#define IS_REG(chr) (chr == 'w' || chr == 'x')
 
 bool isLabel(char* line) {
     char* label_regex_str = "^[a-zA-Z_.][a-zA-Z0-9$_.]*$";
@@ -32,9 +34,35 @@ bool isLabelColon(char *line) {
     return (isLabel(copy) && line[strlen(line)-1] == ':');
 }
 
+char *addSpaces(char *line) {
+    int new_length = 0;
+    for (int i = 0; line[i] != '\0'; i++) {
+        new_length++;
+        if (line[i] == ',') {
+            new_length++;
+        }
+    }
+
+    // Allocate memory for the new string
+    char *result = (char *)malloc(MAX_LINE_LENGTH);
+    assert(result != NULL);
+
+    // Build the new string
+    int j = 0;
+    for (int i = 0; line[i] != '\0'; i++) {
+        result[j++] = line[i];
+        if (line[i] == ',') {
+            result[j++] = ' ';
+        }
+    }
+    result[j] = '\0';
+
+    return result;
+}
+
 // Don't use with an empty string please
 splitLine tokenize_line(char *line_in, int instruction_address) {
-  char *line = (char *)malloc(MAX_LINE_LENGTH);
+  char line[MAX_LINE_LENGTH];
   strcpy(line, line_in);
   char operands[MAX_OPERANDS][MAX_OPERAND_LENGTH];
   char opcode[MAX_OPCODE_LENGTH];
@@ -52,20 +80,26 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
   cur_token = strtok_r(NULL, ",", &leftover);
 
   if (strcmp(opcode, "ldr") == 0 || strcmp(opcode, "str") == 0) {
-      int i = 0;
-      while (line_in[i] != ',') {
+      while (line[i] != ',') {
           i++;
       }
-      i += 2;
+      i++;
+      if (isspace(line[i]) == false) {
+        char *newline = addSpaces(line);
+        strcpy(line, newline);
+        free(newline);
+      }
+      i++;
+
       int addrIndex = i;
       char address[MAX_OPERAND_LENGTH];
-      while (line_in[i] != '\0') {
+      while (line[i] != '\0') {
           address[i - addrIndex] = line_in[i];
           i++;
       }
       address[i - addrIndex] = '\0';
       i--;
-      while (line_in[i] == ' ') {
+      while (line[i] == ' ') {
           address[i - addrIndex] = '\0';
           i--;
       }
