@@ -49,7 +49,7 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
   assert( cur_token != NULL );
   // get all the operands
   int i = 0;
-  cur_token = strtok_r(NULL, ", ", &leftover);
+  cur_token = strtok_r(NULL, ",", &leftover);
 
   if (strcmp(opcode, "ldr") == 0 || strcmp(opcode, "str") == 0) {
       int i = 0;
@@ -88,7 +88,7 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
 }
 
 static void arith_dp_to_instruction(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, arithmeticDPI_t opc) {
-    bool sh = data->operands[3] + 5;
+    bool sh = !strcmp(data->operands[3], "lsl #12");
     char *op2 = data->operands[2];
     if( op2[0] == '#' ) {
         inst->instruction.arithmeticDpi.sf = sf;
@@ -200,7 +200,8 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
             // Convert it to an integer
             // Remove first character
             char *endptr;
-            operands_as_ints[i] = strtoull(cur_operand + 1, &endptr, 10);
+            if (cur_operand[2] == 'x') { operands_as_ints[i] = strtoull(cur_operand + 1, &endptr, 0); }
+            else { operands_as_ints[i] = strtoull(cur_operand + 1, &endptr, 10); }
         } else if( isLabel(cur_operand)) {
             // Get the address of the label
             operands_as_ints[i] = find(symbol_table, cur_operand) - data->instruction_address;

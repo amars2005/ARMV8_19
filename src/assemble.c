@@ -248,15 +248,26 @@ int main(int argc, char **argv) {
   }
 
   // remove empty lines
-  for(int i = 0; code_lines[i] != NULL; i++) {
-      if (strcmp(code_lines[i], "") == 0) {
-          code_lines[i] = NULL;
-      }
+  char* code_lines2[1000];
+  int code_lines2Size = 0;
+
+  for (int i = 0; code_lines[i] != NULL; i++) {
+    if (strcmp(code_lines[i], "")) {
+      //code_lines[i] = NULL;
+
+      code_lines2[code_lines2Size] = code_lines[i];
+      code_lines2Size++;
+
+      // for (int j = (i+1); code_lines[j] != NULL; j++) {
+      //   char* temp = code_lines[j];
+      //   code_lines[j-1] = temp;
+      // }
+    }
   }
 
   // calculate the number of lines of code
     int size = -1;
-    while(code_lines[++size] != NULL) {}
+    while(code_lines2[++size] != NULL) {}
 
     // mallocs the symbol table
     symbolt symbol_table = NEW_SYM_TABLE;
@@ -267,7 +278,7 @@ int main(int argc, char **argv) {
 
     // processes every instruction line and saves them in binary form inside an array of 32 bit ints
     uint32_t instructions[size];
-    secondPass(code_lines, instructions, symbol_table);
+    secondPass(code_lines2, instructions, symbol_table);
 
     // convert all instructions to little endian
     for (int i = 0; i < size; i++) {
