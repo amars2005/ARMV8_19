@@ -10,7 +10,7 @@
 #define X_BIT      ((1) << 15)
 #define SF(i)      ((i) << 31)
 #define MUL        (27 << 24) // 11011
-#define DPI        ( 8 << 26)
+#define DPI        (4 << 26)
 #define ARITHM_DPI (2 << 23)
 #define SH(i)      ((i) << 22)
 #define IMM12(i)   ((i) << 10)

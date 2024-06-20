@@ -18,15 +18,15 @@ uint32_t assembleArithmeticDPI(arithmeticDPI_t opc, uint64_t rd, uint64_t rn, ui
     return instr;
 }
 
-uint32_t assembleWideMoveDPI(uint64_t opc, uint64_t rd, uint64_t imm16, bool sf) {
-    int hw = 0;
-    int mask = (1 << 16) - 1;
-    while ((imm16 & mask) == 0) {
-        hw ++;
-        imm16 >>= 16;
-    }
-    assert(hw < 4);
-    uint32_t instr = SF(sf) + DPI + WMOVE_DPI + OPC(opc) + HW(hw) + IMM16(imm16) + RD(rd);
+uint32_t assembleWideMoveDPI(uint64_t opc, uint64_t rd, uint64_t imm16, uint64_t hw, bool sf) {
+    uint32_t x1 = SF(sf);
+    uint32_t x2 = DPI;
+    uint32_t x3 = WMOVE_DPI;
+    uint32_t x4 = OPC(opc);
+    uint32_t x5 = HW(hw);
+    uint32_t x6 = IMM16(imm16);
+    uint32_t x7 = RD(rd);
+    uint32_t instr = x1 + x2 + x3 + x4 + x5 + x6 + x7;
     return instr;
 }
 

@@ -181,18 +181,17 @@ static void add_zr_and_shuffle(uint64_t *operands_as_ints, int num_ops, int zr_i
     operands_as_ints[zr_index] = ZR;
 }
 
-static void assemble_wmov(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, arithmeticDPI_t opc) {
+static void assemble_wmov(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, int opc) {
+    inst->instruction.wideMoveDpi.sf = sf;
+    inst->instruction.wideMoveDpi.Rd = &operands_as_ints[0];
+    inst->instruction.wideMoveDpi.Op = operands_as_ints[1];
+    inst->instruction.wideMoveDpi.opc = opc;
+    inst->itype = wideMoveDPIt;
     if (data->num_operands == 3) {
-        uint64_t n = apply_shift(sf, &operands_as_ints[1], data->operands[2]);
-        operands_as_ints[1] = n;
+        inst->instruction.wideMoveDpi.hw = operands_as_ints[2];
     }
-    if (data->operands[0][0] == '#') {
-        inst->instruction.arithmeticDpi.sf = sf;
-        inst->instruction.arithmeticDpi.Rd = &operands_as_ints[0];
-        inst->instruction.arithmeticDpi.Rn = &operands_as_ints[1];
-        inst->instruction.arithmeticDpi.Op2 = operands_as_ints[2];
-        inst->instruction.arithmeticDpi.opc = opc;
-        inst->itype = arithmeticDPIt;
+    else {
+        inst->instruction.wideMoveDpi.hw = 0;
     }
 }
 
