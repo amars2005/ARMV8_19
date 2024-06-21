@@ -57,6 +57,36 @@ char *addSpaces(char *line) {
     result[j] = '\0';
 
     return result;
+
+static shift workoutShift(char* operand, int num_operands) {
+    shiftType shiftt;
+    int       amount;
+    if (num_operands == 4) {
+        char shift_s[4];
+        strncpy(shift_s, operand, 3);
+
+        if (EQUAL_STRS(shift_s, "lsl")) {
+            shiftt = lsl;
+        } else if (EQUAL_STRS(shift_s, "lsr")) {
+            shiftt = lsr;
+        } else if (EQUAL_STRS(shift_s, "asr")) {
+            shiftt = asr;
+        } else if (EQUAL_STRS(shift_s, "ror")) {
+            shiftt = ror;
+        } else {
+            fprintf(stderr, "Invalid shift\n");
+            exit(1);
+        }
+        char *endptr;
+        operand += 5;
+        if (operand[1] == 'x') { amount = strtoull(operand, &endptr, 0); }
+        else { amount = (int) strtol(operand, &endptr, 10); }
+    } else {
+        shiftt = 0;
+        amount = 0;
+    }
+    shift s = { .stype = shiftt, .amount = amount };
+    return s;
 }
 
 // Don't use with an empty string please
@@ -123,9 +153,8 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
 }
 
 static void arith_dp_to_instruction(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, arithmeticDPI_t opc) {
-    bool sh = !strcmp(data->operands[3], "lsl #12");
-    char *op2 = data->operands[2];
-    if( op2[0] == '#' ) {
+    if( data->operands[2][0] == '#' ) {
+        bool sh = !strcmp(data->operands[3], "lsl #12");
         inst->instruction.arithmeticDpi.sf = sf;
         inst->instruction.arithmeticDpi.Rd = &operands_as_ints[0];
         inst->instruction.arithmeticDpi.Rn = &operands_as_ints[1];
@@ -135,47 +164,27 @@ static void arith_dp_to_instruction(splitLine *data, uint64_t *operands_as_ints,
         inst->itype = arithmeticDPIt;
     }
     else {
+        shift shift = workoutShift(data->operands[3], data->num_operands);
         inst->instruction.arithmeticDpr.sf = sf;
         inst->instruction.arithmeticDpr.Rd = &operands_as_ints[0];
         inst->instruction.arithmeticDpr.Rn = &operands_as_ints[1];
         inst->instruction.arithmeticDpr.Rm = &operands_as_ints[2];
+        inst->instruction.arithmeticDpr.Shift = shift.stype;
+        inst->instruction.arithmeticDpr.Operand = shift.amount;
         inst->instruction.arithmeticDpr.opc = opc;
         inst->itype = arithmeticDPRt;
     }
 }
 
 static void logic_dpr_to_instruction(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, uint64_t opc, bool n) {
-    shiftType shift;
-    int       amount;
-    if (data->num_operands == 4) {
-        char shift_s[4];
-        strncpy(shift_s, data->operands[3], 3);
-
-        if (EQUAL_STRS(shift_s, "lsl")) {
-            shift = lsl;
-        } else if (EQUAL_STRS(shift_s, "lsr")) {
-            shift = lsr;
-        } else if (EQUAL_STRS(shift_s, "asr")) {
-            shift = asr;
-        } else if (EQUAL_STRS(shift_s, "ror")) {
-            shift = ror;
-        } else {
-            fprintf(stderr, "Invalid shift\n");
-            exit(1);
-        }
-        char *endptr;
-        amount = (int) strtol(data->operands[3] + 5, &endptr, 10);
-    } else {
-        shift = 0;
-        amount = 0;
-    }
+    shift shift = workoutShift(data->operands[3], data->num_operands);
 
     inst->instruction.logicDpr.sf = sf;
     inst->instruction.logicDpr.Rd = &operands_as_ints[0];
     inst->instruction.logicDpr.Rn = &operands_as_ints[1];
     inst->instruction.logicDpr.Rm = &operands_as_ints[2];
-    inst->instruction.logicDpr.Shift = shift;
-    inst->instruction.logicDpr.Operand = amount;
+    inst->instruction.logicDpr.Shift = shift.stype;
+    inst->instruction.logicDpr.Operand = shift.amount;
     inst->instruction.logicDpr.opc = opc;
     inst->instruction.logicDpr.N = n;
     inst->itype = logicDPRt;
@@ -192,13 +201,17 @@ static void multiply_dpr_to_instruction(splitLine *data, uint64_t *operands_as_i
 }
 
 // Adds a new operand at zr_index that is the zero register, and shuffles the others up
-static void add_zr_and_shuffle(uint64_t *operands_as_ints, int num_ops, int zr_index) {
+static void add_zr_and_shuffle(uint64_t *operands_as_ints, splitLine *data, int zr_index, bool sf) {
     // Shuffle
-    for (int i = num_ops - 1; i >= zr_index; i--) {
+    for (int i = data->num_operands; i >= zr_index; i--) {
         operands_as_ints[i] = operands_as_ints[i - 1];
+        strcpy(data->operands[i], data->operands[i - 1]);
     }
+    data->num_operands++;
     // Add zr
     operands_as_ints[zr_index] = ZR;
+    if (sf) { strcpy(data->operands[zr_index], "xzr"); }
+    else { strcpy(data->operands[zr_index], "wzr"); }
 }
 
 static void assemble_wmov(splitLine *data, uint64_t *operands_as_ints, bool sf, instruction *inst, int opc) {
@@ -229,6 +242,7 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
             char *cur_operand = malloc(MAX_OPERAND_LENGTH * sizeof(char));
             strcpy(cur_operand, (operands)[i]);
 
+<<<<<<< src/tokenizer.c
             if( EQUAL_STRS((operands)[i], "xzr") || EQUAL_STRS((operands)[i], "wzr")) {
                 // Zero register case
                 operands_as_ints[i] = ZR;
@@ -246,6 +260,23 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
                 operands_as_ints[i] = strtoull(cur_operand, &endptr, 10);
             }
             free(cur_operand);
+=======
+        if( EQUAL_STRS((operands)[i], "xzr") || EQUAL_STRS((operands)[i], "wzr")) {
+            // Zero register case
+            operands_as_ints[i] = ZR;
+        } else if (cur_operand[0] == 'x' || cur_operand[0] == 'w' || cur_operand[0] == '#') {
+            // Convert it to an integer
+            // Remove first character
+            char *endptr;
+            if (cur_operand[2] == 'x') { operands_as_ints[i] = strtoull(cur_operand + 1, &endptr, 0); }
+            else { operands_as_ints[i] = strtoull(cur_operand + 1, &endptr, 10); }
+        } else if( isLabel(cur_operand)) {
+            // Get the address of the label
+            operands_as_ints[i] = find(symbol_table, cur_operand);
+        } else if (!strcmp(data->opcode, ".int")) {
+            char *endptr;
+            operands_as_ints[i] = strtoull(cur_operand, &endptr, 10);
+>>>>>>> src/tokenizer.c
         }
     }    
 
@@ -285,22 +316,22 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, subs);
   } else if (EQUAL_STRS(data->opcode, "cmp")) {
       // Shuffle operands down so I can put ZR in
-      add_zr_and_shuffle(operands_as_ints, 3, 0);
+      add_zr_and_shuffle(operands_as_ints, data, 0, sf);
       // Now we can call the equivalent dp case
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, subs);
   } else if (EQUAL_STRS(data->opcode, "cmn")) {
       // Shuffle operands down so I can put ZR in
-      add_zr_and_shuffle(operands_as_ints, 3, 0);
+      add_zr_and_shuffle(operands_as_ints, data, 0, sf);
       // Now we can call the equivalent dp case
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, adds);
   } else if (EQUAL_STRS(data->opcode, "neg")) {
       // Shuffle operands down so I can put ZR in
-      add_zr_and_shuffle(operands_as_ints, 3, 1);
+      add_zr_and_shuffle(operands_as_ints, data, 1, sf);
       // Now we can call the equivalent dp case
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, sub);
   } else if (EQUAL_STRS(data->opcode, "negs")) {
       // Shuffle operands down so I can put ZR in
-      add_zr_and_shuffle(operands_as_ints, 3, 1);
+      add_zr_and_shuffle(operands_as_ints, data, 1, sf);
       // Now we can call the equivalent dp case
       arith_dp_to_instruction(data, operands_as_ints, sf, &inst, subs);
   } else if (EQUAL_STRS(data->opcode, "and")) {
@@ -321,11 +352,11 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
       logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, orn, true);
   } else if (EQUAL_STRS(data->opcode, "tst")) {
       // Shuffle operands down so I can put ZR in
-      add_zr_and_shuffle(operands_as_ints, 3, 0);
+      add_zr_and_shuffle(operands_as_ints, data, 0, sf);
       // Now we can call the equivalent dp case
       logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, ands, false);
   } else if (EQUAL_STRS(data->opcode, "mvn")) {
-      add_zr_and_shuffle(operands_as_ints, 3, 1);
+      add_zr_and_shuffle(operands_as_ints, data, 1, sf);
       logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, orn, true);
   } else if (EQUAL_STRS(data->opcode, "movn")) {
     //assemble_wmov(splitLine *data, uint64_t **operands_as_ints, bool sf, instruction *inst, arithmeticDPI_t opc)
@@ -335,7 +366,7 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
   } else if (EQUAL_STRS(data->opcode, "movz")) {
       assemble_wmov(data, operands_as_ints, sf, &inst, movz);
   } else if (EQUAL_STRS(data->opcode, "mov")) {
-      add_zr_and_shuffle(operands_as_ints, 3, 1);
+      add_zr_and_shuffle(operands_as_ints, data, 1, sf);
       logic_dpr_to_instruction(data, operands_as_ints, sf, &inst, orr, false);
   } else if (EQUAL_STRS(data->opcode, "madd")) {
       multiply_dpr_to_instruction(data, operands_as_ints, sf, &inst, false);
@@ -350,36 +381,44 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
   } else if (EQUAL_STRS(data->opcode, "b")) {
       inst.itype = brancht;
       inst.instruction.branch.offset = operands_as_ints[0];
+      inst.instruction.branch.offset -= data->instruction_address;
   } else if (EQUAL_STRS(data->opcode, "br")) {
       inst.itype = bregt;
       inst.instruction.breg.Xn = &operands_as_ints[0];
   } else if (EQUAL_STRS(data->opcode, "b.eq")) {
       inst.itype = bcondt;
       inst.instruction.bcond.offset = operands_as_ints[0];
+      inst.instruction.bcond.offset -= data->instruction_address;
       inst.instruction.bcond.cond   = EQ;
   } else if (EQUAL_STRS(data->opcode, "b.ne")) {
       inst.itype = bcondt;
       inst.instruction.bcond.offset = operands_as_ints[0];
-      inst.instruction.bcond.cond   = EQ;
+      inst.instruction.bcond.offset -= data->instruction_address;
+      inst.instruction.bcond.cond   = NE;
   } else if (EQUAL_STRS(data->opcode, "b.ge")) {
       inst.itype = bcondt;
       inst.instruction.bcond.offset = operands_as_ints[0];
+      inst.instruction.bcond.offset -= data->instruction_address;
       inst.instruction.bcond.cond   = GE;
   } else if (EQUAL_STRS(data->opcode, "b.lt")) {
       inst.itype = bcondt;
       inst.instruction.bcond.offset = operands_as_ints[0];
+      inst.instruction.bcond.offset -= data->instruction_address;
       inst.instruction.bcond.cond   = LT;
   } else if (EQUAL_STRS(data->opcode, "b.gt")) {
       inst.itype = bcondt;
       inst.instruction.bcond.offset = operands_as_ints[0];
+      inst.instruction.bcond.offset -= data->instruction_address;
       inst.instruction.bcond.cond   = GT;
   } else if (EQUAL_STRS(data->opcode, "b.le")) {
       inst.itype = bcondt;
       inst.instruction.bcond.offset = operands_as_ints[0];
+      inst.instruction.bcond.offset -= data->instruction_address;
       inst.instruction.bcond.cond   = LE;
   } else if (EQUAL_STRS(data->opcode, "b.al")) {
       inst.itype = bcondt;
       inst.instruction.bcond.offset = operands_as_ints[0];
+      inst.instruction.bcond.offset -= data->instruction_address;
       inst.instruction.bcond.cond   = AL;
   } else if (EQUAL_STRS(data->opcode, "ldr")) {
       char *rtTemp = &data->operands[0][1];

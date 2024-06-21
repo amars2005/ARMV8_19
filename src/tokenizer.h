@@ -5,6 +5,9 @@
 //#include "symbol_table.h"
 //#include "instruction-types.h"
 #include "sdthandler.h"
+#include "bitwise-shift.h"
+#include "symbol_table.h"
+#include "instruction-types.h"
 
 #define MAX_OPERANDS 10
 #define MAX_LINE_LENGTH 100
@@ -25,6 +28,11 @@ typedef struct {
     int num_operands;
     int instruction_address;
 } splitLine;
+
+typedef struct {
+    shiftType stype;
+    int amount;
+} shift;
 
 /*
 tokenise_line takes a well-formed non-empty string and splits it into a splitLine data structure

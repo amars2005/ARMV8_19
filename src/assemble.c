@@ -148,7 +148,7 @@ char **readFile(FILE *file) {
 void secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
     int j = 0;
     for (int k = 0; lines[k] != NULL; k ++) {
-        splitLine l_splitLine = tokenize_line(lines[k], k*4);
+        splitLine l_splitLine = tokenize_line(lines[k], j);
         instruction i = line_to_instruction(&l_splitLine, symbol_table);
         switch (i.itype) {
             case arithmeticDPIt:
@@ -158,7 +158,7 @@ void secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
                 instrs[j] = assembleWideMoveDPI(i.instruction.wideMoveDpi.opc, *i.instruction.wideMoveDpi.Rd, i.instruction.wideMoveDpi.Op, i.instruction.wideMoveDpi.hw, i.instruction.arithmeticDpi.sf);
                 break;
             case arithmeticDPRt:
-                instrs[j] = assembleArithmeticDPR(i.instruction.arithmeticDpr.opc, *i.instruction.arithmeticDpr.Rd, *i.instruction.arithmeticDpr.Rn, *i.instruction.arithmeticDpr.Rm, i.instruction.arithmeticDpr.Shift, i.instruction.arithmeticDpi.sf);
+                instrs[j] = assembleArithmeticDPR(i.instruction.arithmeticDpr.opc, *i.instruction.arithmeticDpr.Rd, *i.instruction.arithmeticDpr.Rn, *i.instruction.arithmeticDpr.Rm, i.instruction.arithmeticDpr.Shift, i.instruction.arithmeticDpr.Operand, i.instruction.arithmeticDpi.sf);
                 break;
             case logicDPRt:
                 instrs[j] = assembleLogicDPR(i.instruction.logicDpr.opc, *i.instruction.logicDpr.Rd, *i.instruction.logicDpr.Rn, *i.instruction.logicDpr.Rm, i.instruction.logicDpr.Shift, i.instruction.logicDpr.Operand, i.instruction.logicDpr.N, i.instruction.logicDpr.sf);
@@ -274,12 +274,16 @@ int main(int argc, char **argv) {
     symbol_table->next = NULL;
 
     // goes through every instruction and records the address of every label into the symbol table
-    firstPass(symbol_table, code_lines);
+    firstPass(symbol_table, code_lines2);
 
     // processes every instruction line and saves them in binary form inside an array of 32 bit ints
     uint32_t instructions[size];
     secondPass(code_lines2, instructions, symbol_table);
 
+    size = -1;
+    while(instructions[++size] != 0x0000008a) {}
+    size++;
+    
     // convert all instructions to little endian
     for (int i = 0; i < size; i++) {
         instructions[i] = convertToLittleEndian(instructions[i]);

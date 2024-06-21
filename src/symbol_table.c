@@ -3,6 +3,7 @@
 #include <regex.h>
 #include <inttypes.h>
 #include <string.h>
+#include "tokenizer.h"
 #include "symbol_table.h"
 
 void addToTable(symbolt t, char* label, uint64_t value) {
@@ -29,30 +30,21 @@ uint64_t find(symbolt t, char* label) {
 }
 
 void firstPass(symbolt t, char** lines) {
-    char* label_regex_str = "[a-zA-Z_.][a-zA-Z0-9$_.]*:";
-    regex_t label_regex;
-    int value = regcomp(&label_regex, label_regex_str, 0);
-
-    if (value != 0) {
-        fprintf(stderr, "Regex compilation failed\n");
-        exit(1);
-    }
-
     int instr_num = 0;
     for (char** line = lines; *line != NULL; line ++) {
-        if (regexec(&label_regex, *line, 0, NULL, 0) == REG_NOMATCH) {
+        if (!isLabelColon(*line)) {
             instr_num ++;
             continue;
         }
 
         char label[strlen(*line) + 1];
         strcpy(label, *line);
+        
         int i = strlen(label);
         while (label[i] != ':') { i--; }
         label[i] = '\0';
-        int addr = (instr_num + 1) * 4;
+        int addr = instr_num;
 
         addToTable(t, label, addr);
     }
-    regfree(&label_regex);
 }
