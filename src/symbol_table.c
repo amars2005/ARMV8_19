@@ -25,8 +25,7 @@ uint64_t find(symbolt t, char* label) {
         }
         t = t->next;
     }
-    fprintf(stderr, "Label: %s not found", label);
-    exit(1);
+    return -1;
 }
 
 void firstPass(symbolt t, char** lines) {

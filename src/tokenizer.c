@@ -255,7 +255,7 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
             if( EQUAL_STRS((operands)[i], "xzr") || EQUAL_STRS((operands)[i], "wzr")) {
                 // Zero register case
                 operands_as_ints[i] = ZR;
-            } else if (cur_operand[0] == 'x' || cur_operand[0] == 'w' || cur_operand[0] == '#') {
+            } else if ((cur_operand[0] == 'x' || cur_operand[0] == 'w' || cur_operand[0] == '#') & (find(symbol_table, cur_operand) == -1)) {
                 // Convert it to an integer
                 // Remove first character
                 char *endptr;

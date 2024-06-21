@@ -8,6 +8,9 @@
 #define LE 13 // 1101
 #define AL 14 // 1110
 
+#define MASK19 0x7ffff
+#define MASK26 0x3ffffff
+
 #define LITTLE(i)  ((i & 0xFF) << 24) | \
                    ((i & 0xFF00) << 8) | \
                    ((i >> 8) & 0xFF00) | \
