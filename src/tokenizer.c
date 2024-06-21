@@ -424,7 +424,7 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
       inst = SDTbuilder("str", rt, data->operands[1], sf, symbol_table);
   } else if (EQUAL_STRS(data->opcode, ".int")) {
       inst.itype = directive;
-      inst.instruction.directive = operands_as_ints[0];
+      inst.instruction.directive = LITTLE(operands_as_ints[0]);
   } else if (isLabelColon(data->opcode)) {
       inst.itype = label;
   } else {

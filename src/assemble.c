@@ -145,7 +145,7 @@ char **readFile(FILE *file) {
   return lines;
 }
 
-void secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
+int secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
     int j = 0;
     for (int k = 0; lines[k] != NULL; k ++) {
         splitLine l_splitLine = tokenize_line(lines[k], j);
@@ -195,6 +195,7 @@ void secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
         }
         j++;
     }
+    return j;
 }
 
 // Converts each instruction to a uint32_t instruction stored in little Endian
@@ -278,11 +279,7 @@ int main(int argc, char **argv) {
 
     // processes every instruction line and saves them in binary form inside an array of 32 bit ints
     uint32_t instructions[size];
-    secondPass(code_lines2, instructions, symbol_table);
-
-    size = -1;
-    while(instructions[++size] != 0x0000008a) {}
-    size++;
+    size = secondPass(code_lines2, instructions, symbol_table);
     
     // convert all instructions to little endian
     for (int i = 0; i < size; i++) {
