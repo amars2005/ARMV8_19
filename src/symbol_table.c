@@ -20,7 +20,7 @@ void addToTable(symbolt t, char* label, uint64_t value) {
 
 uint64_t find(symbolt t, char* label) {
     while (t != NULL) {
-        if (strcmp(label, t->pair->label) == 0) {
+        if (!strcmp(label, t->pair->label)) {
             return t->pair->value;
         }
         t = t->next;
