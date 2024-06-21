@@ -299,7 +299,7 @@ char *splitAlnum(char *address) {
     }
 }
 
-instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf, symbolt table) {
+instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf, symbolt table, int instruction_address) {
     // Need to decode the type of address
     char hash = '#';
     int len = strlen(address);
@@ -314,7 +314,7 @@ instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf, symbol
     }
     uint64_t value; uint64_t *valueAddr = NULL;
     if (sndInput != NULL) {
-        value = find(table, sndInputCheck);
+        value = find(table, sndInputCheck) - instruction_address;
         valueAddr = &value;
         //char str[100];
         //sprintf(str, "%llu", value);

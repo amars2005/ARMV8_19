@@ -417,12 +417,12 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
       data->operands[1][op1_length] = '\0';
       char *rtTemp = &data->operands[0][1];
       uint8_t rt = (uint8_t) atoi(rtTemp);
-      inst = SDTbuilder("ldr", rt, data->operands[1], sf, symbol_table);
+      inst = SDTbuilder("ldr", rt, data->operands[1], sf, symbol_table, data->instruction_address);
   } else if (EQUAL_STRS(data->opcode, "str")) {
       data->operands[1][op1_length] = '\0';
       char *rtTemp = &data->operands[0][1];
       uint8_t rt = (uint8_t) atoi(rtTemp);
-      inst = SDTbuilder("str", rt, data->operands[1], sf, symbol_table);
+      inst = SDTbuilder("str", rt, data->operands[1], sf, symbol_table, data->instruction_address);
   } else if (EQUAL_STRS(data->opcode, ".int")) {
       inst.itype = directive;
       inst.instruction.directive = LITTLE(operands_as_ints[0]);

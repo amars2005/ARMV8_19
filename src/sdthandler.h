@@ -8,7 +8,7 @@
 
 #define MASK9 0x1ff
 
-extern instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf, symbolt table);
+extern instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf, symbolt table, int instruction_address);
 extern uint32_t assembleLL(LL literal);
 extern uint32_t assembleIndexSDT(SDTindex index);
 extern uint32_t assembleUOffsetSDT(SDTuOffset uoffset);
