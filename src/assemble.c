@@ -292,6 +292,7 @@ int main(int argc, char **argv) {
     free(code_lines[i]);
   }
   free(code_lines);
+  freeTable(symbol_table);
 
   return EXIT_SUCCESS;
 }

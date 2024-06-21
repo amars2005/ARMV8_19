@@ -28,6 +28,11 @@ uint64_t find(symbolt t, char* label) {
     return -1;
 }
 
+void freeTable(symbolt t) {
+    if (t->next != NULL){ freeTable(t->next); }
+    free(t);
+}
+
 void firstPass(symbolt t, char** lines) {
     int instr_num = 0;
     for (char** line = lines; *line != NULL; line ++) {

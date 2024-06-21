@@ -20,6 +20,7 @@ struct symbolt_node{
 
 extern void addToTable(symbolt t, char* label, uint64_t value);
 extern uint64_t find(symbolt t, char* label);
+extern void freeTable(symbolt t);
 extern void firstPass(symbolt t, char** lines);
 
 #endif
