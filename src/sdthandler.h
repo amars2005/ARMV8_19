@@ -7,6 +7,7 @@
                    (i >> 24);
 
 #define MASK9 0x1ff
+#define MASK19 0x7ffff
 
 extern instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf, symbolt table, int instruction_address);
 extern uint32_t assembleLL(LL literal);
