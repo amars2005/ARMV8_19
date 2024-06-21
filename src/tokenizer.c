@@ -27,10 +27,18 @@ bool isLabel(char* line) {
 }
 
 bool isLabelColon(char *line) {
-    char copy[strlen(line) + 2];
-    strcpy(copy, line);
-    copy[strlen(line) - 1] = '\0';
-    return (isLabel(copy) && line[strlen(line)-1] == ':');
+    char* label_regex_str = "^[a-zA-Z_.][a-zA-Z0-9$_.]*:[ ]*$";
+    regex_t label_regex;
+    int value = regcomp(&label_regex, label_regex_str, REG_EXTENDED);
+
+    if (value != 0) {
+        fprintf(stderr, "Regex compilation failed\n");
+        exit(1);
+    }
+
+    bool ret = (regexec(&label_regex, line, 0, NULL, 0) != REG_NOMATCH);
+    regfree(&label_regex);
+    return ret;
 }
 
 char *addSpaces(char *line) {

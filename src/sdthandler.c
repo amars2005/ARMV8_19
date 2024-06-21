@@ -30,7 +30,6 @@ static instruction loadLiteralBuilder(uint8_t rt, char *address, uint8_t sf, uin
     } else {
         simm19 = (uint32_t) *value;
     }
-    assert(simm19 % 4 == 0);
     literal.simm19 = simm19;
     literal.Rt = (uint64_t) rt;
     data.ll = literal;
