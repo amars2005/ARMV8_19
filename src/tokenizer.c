@@ -266,7 +266,8 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
                 operands_as_ints[i] = find(symbol_table, cur_operand);
             } else if (!strcmp(data->opcode, ".int")) {
                 char *endptr;
-                operands_as_ints[i] = strtoull(cur_operand, &endptr, 10);
+                if (cur_operand[1] == 'x') { operands_as_ints[i] = strtoull(cur_operand, &endptr, 0); }
+                else { operands_as_ints[i] = strtoull(cur_operand, &endptr, 10); }
             }
             free(cur_operand);
         }
