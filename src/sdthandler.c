@@ -55,7 +55,7 @@ static instruction zeroOffsetBuilder(char *type, uint8_t rt, char *address, uint
     uoffset.Xn = xn;
     uoffset.imm12 = 0;
 
-    if (strcmp(type, "ldr") == 0) {
+    if (!strcmp(type, "ldr")) {
         uoffset.l = 1;
     } else {
         uoffset.l = 0;
@@ -100,7 +100,7 @@ static instruction preIndexBuilder(char *type, uint8_t rt, char *address, uint8_
     preIndex.i = 1;
     preIndex.u = 0;
 
-    if (strcmp(type, "ldr") == 0) {
+    if (!strcmp(type, "ldr")) {
         preIndex.l = 1;
     } else {
         preIndex.l = 0;
@@ -165,7 +165,7 @@ static instruction postIndexBuilder(char *type, uint8_t rt, char *address, uint8
     postindex.i = 0;
     postindex.u = 0;
 
-    if (strcmp(type, "ldr") == 0) {
+    if (!strcmp(type, "ldr")) {
         postindex.l = 1;
     } else {
         postindex.l = 0;
@@ -218,7 +218,7 @@ static instruction unsignedOffsetBuilder(char *type, uint8_t rt, char *address, 
 
     uoffset.imm12 = imm12 >> (2 + sf);
 
-    if (strcmp(type, "ldr") == 0) {
+    if (!strcmp(type, "ldr")) {
         uoffset.l = 1;
     } else {
         uoffset.l = 0;
@@ -264,7 +264,7 @@ static instruction registerOffsetBuilder(char *type, uint8_t rt, char *address, 
     }
     regoffset.Xm = xm;
 
-    if (strcmp(type, "ldr") == 0) {
+    if (!strcmp(type, "ldr")) {
         regoffset.l = 1;
     } else {
         regoffset.l = 0;

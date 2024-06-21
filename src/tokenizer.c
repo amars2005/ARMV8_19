@@ -117,7 +117,7 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
   int i = 0;
   cur_token = strtok_r(NULL, ",", &leftover);
 
-  if (strcmp(opcode, "ldr") == 0 || strcmp(opcode, "str") == 0) {
+  if (!strcmp(opcode, "ldr") || !strcmp(opcode, "str")) {
       while (line[i] != ',') {
           i++;
       }
@@ -247,7 +247,7 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
         strcpy(operands[i], data->operands[i]);
     }
     // Check if any of the operands are a label
-    if (strcmp(data->opcode,"ldr") != 0 && strcmp(data->opcode,"str") != 0) {
+    if (strcmp(data->opcode,"ldr") && strcmp(data->opcode,"str")) {
         for( int i = 0; i < data->num_operands; i++ ) {
             char *cur_operand = malloc(MAX_OPERAND_LENGTH * sizeof(char));
             strcpy(cur_operand, (operands)[i]);
