@@ -6,6 +6,8 @@
                    ((i >> 8) & 0xFF00) | \
                    (i >> 24);
 
+#define MASK9 0x1ff
+
 extern instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf, symbolt table);
 extern uint32_t assembleLL(LL literal);
 extern uint32_t assembleIndexSDT(SDTindex index);

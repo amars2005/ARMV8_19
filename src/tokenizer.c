@@ -57,6 +57,7 @@ char *addSpaces(char *line) {
     result[j] = '\0';
 
     return result;
+}
 
 static shift workoutShift(char* operand, int num_operands) {
     shiftType shiftt;
@@ -242,7 +243,6 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
             char *cur_operand = malloc(MAX_OPERAND_LENGTH * sizeof(char));
             strcpy(cur_operand, (operands)[i]);
 
-<<<<<<< src/tokenizer.c
             if( EQUAL_STRS((operands)[i], "xzr") || EQUAL_STRS((operands)[i], "wzr")) {
                 // Zero register case
                 operands_as_ints[i] = ZR;
@@ -254,29 +254,12 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
                 else { operands_as_ints[i] = strtoull(cur_operand + 1, &endptr, 10); }
             } else if( isLabel(cur_operand)) {
                 // Get the address of the label
-                operands_as_ints[i] = find(symbol_table, cur_operand) - data->instruction_address;
+                operands_as_ints[i] = find(symbol_table, cur_operand);
             } else if (!strcmp(data->opcode, ".int")) {
                 char *endptr;
                 operands_as_ints[i] = strtoull(cur_operand, &endptr, 10);
             }
             free(cur_operand);
-=======
-        if( EQUAL_STRS((operands)[i], "xzr") || EQUAL_STRS((operands)[i], "wzr")) {
-            // Zero register case
-            operands_as_ints[i] = ZR;
-        } else if (cur_operand[0] == 'x' || cur_operand[0] == 'w' || cur_operand[0] == '#') {
-            // Convert it to an integer
-            // Remove first character
-            char *endptr;
-            if (cur_operand[2] == 'x') { operands_as_ints[i] = strtoull(cur_operand + 1, &endptr, 0); }
-            else { operands_as_ints[i] = strtoull(cur_operand + 1, &endptr, 10); }
-        } else if( isLabel(cur_operand)) {
-            // Get the address of the label
-            operands_as_ints[i] = find(symbol_table, cur_operand);
-        } else if (!strcmp(data->opcode, ".int")) {
-            char *endptr;
-            operands_as_ints[i] = strtoull(cur_operand, &endptr, 10);
->>>>>>> src/tokenizer.c
         }
     }    
 

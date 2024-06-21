@@ -23,11 +23,7 @@ static instruction loadLiteralBuilder(uint8_t rt, char *address, uint8_t sf, uin
     inst.itype = ll;
     instrData data;
     LL literal;
-    if (sf == 0) {
-        literal.sf = false;
-    } else {
-        literal.sf = true;
-    }
+    literal.sf = sf;
     uint32_t simm19;
     if (value == NULL) {
         simm19 = checkHex(address + 1);
@@ -51,10 +47,10 @@ static instruction zeroOffsetBuilder(char *type, uint8_t rt, char *address, uint
 
     uint64_t xn;
     if (address[3] == ']') {
-        char n[1] = {address[2]};
+        char n[2] = {address[2], '\0'};
         xn = atoi(n);
     } else {
-        char n[2] = {address[2], address[3]};
+        char n[3] = {address[2], address[3], '\0'};
         xn = atoi(n);
     }
     uoffset.Xn = xn;
@@ -66,11 +62,7 @@ static instruction zeroOffsetBuilder(char *type, uint8_t rt, char *address, uint
         uoffset.l = 0;
     }
 
-    if (sf == 0) {
-        uoffset.sf = false;
-    } else {
-        uoffset.sf = true;
-    }
+    uoffset.sf = sf;
 
     uoffset.u = true;
     uoffset.Rt = (uint64_t) rt;
@@ -105,7 +97,7 @@ static instruction preIndexBuilder(char *type, uint8_t rt, char *address, uint8_
         free(simm9temp);
     }
     
-    preIndex.simm9 = simm9;
+    preIndex.simm9 = simm9 & MASK9;
     preIndex.i = 1;
     preIndex.u = 0;
 
@@ -119,19 +111,15 @@ static instruction preIndexBuilder(char *type, uint8_t rt, char *address, uint8_
 
     uint64_t xn;
     if (address[3] == ',') {
-        char n[1] = {address[2]};
+        char n[2] = {address[2], '\0'};
         xn = atoi(n);
     } else {
-        char n[2] = {address[2], address[3]};
+        char n[3] = {address[2], address[3], '\0'};
         xn = atoi(n);
     }
     preIndex.Xn = xn;
 
-    if (sf == 0) {
-        preIndex.sf = false;
-    } else {
-        preIndex.sf = true;
-    }
+    preIndex.sf = sf;
 
     data.sdtindex = preIndex;
     inst.instruction = data;
@@ -147,10 +135,10 @@ static instruction postIndexBuilder(char *type, uint8_t rt, char *address, uint8
 
     uint64_t xn;
     if (address[3] == ']') {
-        char n[1] = {address[2]};
+        char n[2] = {address[2], '\0'};
         xn = atoi(n);
     } else {
-        char n[2] = {address[2], address[3]};
+        char n[3] = {address[2], address[3], '\0'};
         xn = atoi(n);
     }
     postindex.Xn = xn;
@@ -174,7 +162,7 @@ static instruction postIndexBuilder(char *type, uint8_t rt, char *address, uint8
         free(simm9temp);
     }
 
-    postindex.simm9 = simm9;
+    postindex.simm9 = simm9 & MASK9;
     postindex.i = 0;
     postindex.u = 0;
 
@@ -186,11 +174,7 @@ static instruction postIndexBuilder(char *type, uint8_t rt, char *address, uint8
 
     postindex.Rt = rt;
 
-    if (sf == 0) {
-        postindex.sf = false;
-    } else {
-        postindex.sf = true;
-    }
+    postindex.sf = sf;
 
     data.sdtindex = postindex;
     inst.instruction = data;
@@ -206,10 +190,10 @@ static instruction unsignedOffsetBuilder(char *type, uint8_t rt, char *address, 
 
     uint64_t xn;
     if (address[3] == '{') {
-        char n[1] = {address[2]};
+        char n[2] = {address[2], '\0'};
         xn = atoi(n);
     } else {
-        char n[2] = {address[2], address[3]};
+        char n[3] = {address[2], address[3], '\0'};
         xn = atoi(n);
     }
     uoffset.Xn = xn;
@@ -241,11 +225,7 @@ static instruction unsignedOffsetBuilder(char *type, uint8_t rt, char *address, 
         uoffset.l = 0;
     }
 
-    if (sf == 0) {
-        uoffset.sf = false;
-    } else {
-        uoffset.sf = true;
-    }
+    uoffset.sf = sf;
 
     uoffset.u = true;
     uoffset.Rt = (uint64_t) rt;
@@ -263,24 +243,24 @@ static instruction registerOffsetBuilder(char *type, uint8_t rt, char *address, 
 
     uint64_t xn;
     if (address[3] == ',') {
-        char n[1] = {address[2]};
+        char n[2] = {address[2], '\0'};
         xn = atoi(n);
     } else {
-        char n[2] = {address[2], address[3]};
+        char n[3] = {address[2], address[3], '\0'};
         xn = atoi(n);
     }
     regoffset.Xn = xn;
 
     int commaIndex = 0;
-    while (address[commaIndex] != '#') {
+    while (address[commaIndex] != ',') {
         commaIndex++;
     }
     uint64_t xm;
     if (address[commaIndex + 4] == ']') {
-        char n[1] = {address[commaIndex + 3]};
+        char n[2] = {address[commaIndex + 3], '\0'};
         xm = atoi(n);
     } else {
-        char n[2] = {address[commaIndex + 3], address[commaIndex + 4]};
+        char n[3] = {address[commaIndex + 3], address[commaIndex + 4], '\0'};
         xm = atoi(n);
     }
     regoffset.Xm = xm;
@@ -291,11 +271,7 @@ static instruction registerOffsetBuilder(char *type, uint8_t rt, char *address, 
         regoffset.l = 0;
     }
 
-    if (sf == 0) {
-        regoffset.sf = false;
-    } else {
-        regoffset.sf = true;
-    }
+    regoffset.sf = sf;
 
     regoffset.u = false;
     regoffset.Rt = (uint64_t) rt;
@@ -351,10 +327,10 @@ instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf, symbol
         return preIndexBuilder(type, rt, address, sf, valueAddr);
     } else if (address[len - 1] == ']' && strchr(address, hash) != NULL) {
         return unsignedOffsetBuilder(type, rt, address, sf, valueAddr);
-    } else if (address[strlen(address) - 1] == ']') {
-        return registerOffsetBuilder(type, rt, address, sf);
-    } else if (address[len - 1] == ']' && len < 6) {
+    } else if (address[strlen(address) - 1] == ']' && len < 6) {
         return zeroOffsetBuilder(type, rt, address, sf);
+    } else if (address[len - 1] == ']') {
+        return registerOffsetBuilder(type, rt, address, sf);
     } else {
         return postIndexBuilder(type, rt, address, sf, valueAddr);
     }
