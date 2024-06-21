@@ -148,7 +148,7 @@ char **readFile(FILE *file) {
 void secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
     int j = 0;
     for (int k = 0; lines[k] != NULL; k ++) {
-        splitLine l_splitLine = tokenize_line(lines[k], k*4);
+        splitLine l_splitLine = tokenize_line(lines[k], j);
         instruction i = line_to_instruction(&l_splitLine, symbol_table);
         switch (i.itype) {
             case arithmeticDPIt:
@@ -274,7 +274,7 @@ int main(int argc, char **argv) {
     symbol_table->next = NULL;
 
     // goes through every instruction and records the address of every label into the symbol table
-    firstPass(symbol_table, code_lines);
+    firstPass(symbol_table, code_lines2);
 
     // processes every instruction line and saves them in binary form inside an array of 32 bit ints
     uint32_t instructions[size];
