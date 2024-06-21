@@ -12,18 +12,18 @@ movz w6, #0
 high:
 str w1, [x3]
 movz w6, #1
-b set_delay
+b setdelay
 
 low:
 str w1, [x5]
 movz w6, #0
 
-set_delay:
+setdelay:
 movz w4, #0x50, lsl #16
 
 delay_loop:
 subs w4, w4, #1         
-b.ne delay_loop 
+b.ne delay_loop
 
 cmp w6, #0
 b.ne low
