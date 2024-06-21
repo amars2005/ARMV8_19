@@ -368,7 +368,7 @@ uint32_t assembleLL(LL literal) {
     if (literal.sf == true) {
         instruction += 1 << 30;
     }
-    return instruction;
+    return LITTLE(instruction);
 }
 
 uint32_t assembleIndexSDT(SDTindex index) {
@@ -391,7 +391,7 @@ uint32_t assembleIndexSDT(SDTindex index) {
         instruction += 2 << 30;
     }
 
-    return instruction;
+    return LITTLE(instruction);
 }
 
 uint32_t assembleUOffsetSDT(SDTuOffset uoffset) {
@@ -410,7 +410,7 @@ uint32_t assembleUOffsetSDT(SDTuOffset uoffset) {
         instruction += 2 << 30;
     }
 
-    return instruction;
+    return LITTLE(instruction);
 }
 
 uint32_t assembleRegOffsetSDT(SDTregOffset regoffset) {
@@ -431,5 +431,5 @@ uint32_t assembleRegOffsetSDT(SDTregOffset regoffset) {
         instruction += 2 << 30;
     }
 
-    return instruction;
+    return LITTLE(instruction);
 }
