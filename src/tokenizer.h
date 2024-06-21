@@ -2,6 +2,9 @@
 #define TOKENIZER_H
 
 #include <stdbool.h>
+//#include "symbol_table.h"
+//#include "instruction-types.h"
+#include "sdthandler.h"
 #include "bitwise-shift.h"
 #include "symbol_table.h"
 #include "instruction-types.h"

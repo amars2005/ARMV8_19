@@ -4,11 +4,12 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <regex.h>
+#include <ctype.h>
 #include "tokenizer.h"
-#include "instruction-types.h"
+//include "instruction-types.h"
 #include "bitwise-shift.h"
-#include "sdthandler.h"
-#include "symbol_table.h"
+//#include "sdthandler.h"
+//#include "symbol_table.h"
 
 bool isLabel(char* line) {
     char* label_regex_str = "^[a-zA-Z_.][a-zA-Z0-9$_.]*$";
@@ -31,6 +32,31 @@ bool isLabelColon(char *line) {
     copy[strlen(line) - 1] = '\0';
     return (isLabel(copy) && line[strlen(line)-1] == ':');
 }
+
+char *addSpaces(char *line) {
+    int new_length = 0;
+    for (int i = 0; line[i] != '\0'; i++) {
+        new_length++;
+        if (line[i] == ',') {
+            new_length++;
+        }
+    }
+
+    // Allocate memory for the new string
+    char *result = (char *)malloc(MAX_LINE_LENGTH);
+    assert(result != NULL);
+
+    // Build the new string
+    int j = 0;
+    for (int i = 0; line[i] != '\0'; i++) {
+        result[j++] = line[i];
+        if (line[i] == ',') {
+            result[j++] = ' ';
+        }
+    }
+    result[j] = '\0';
+
+    return result;
 
 static shift workoutShift(char* operand, int num_operands) {
     shiftType shiftt;
@@ -83,20 +109,26 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
   cur_token = strtok_r(NULL, ",", &leftover);
 
   if (strcmp(opcode, "ldr") == 0 || strcmp(opcode, "str") == 0) {
-      int i = 0;
-      while (line_in[i] != ',') {
+      while (line[i] != ',') {
           i++;
       }
-      i += 2;
+      i++;
+      if (isspace(line[i]) == false) {
+        char *newline = addSpaces(line);
+        strcpy(line, newline);
+        free(newline);
+      }
+      i++;
+
       int addrIndex = i;
       char address[MAX_OPERAND_LENGTH];
-      while (line_in[i] != '\0') {
-          address[i - addrIndex] = line_in[i];
+      while (line[i] != '\0') {
+          address[i - addrIndex] = line[i];
           i++;
       }
       address[i - addrIndex] = '\0';
       i--;
-      while (line_in[i] == ' ') {
+      while (line[i] == ' ') {
           address[i - addrIndex] = '\0';
           i--;
       }
@@ -104,6 +136,7 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
       strcpy(operands2[0], cur_token);
       strcpy(operands2[1], address);
       splitLine tokens = {opcode, operands2, 2, instruction_address};
+      free(line);
       return tokens;
   }
 
@@ -115,6 +148,7 @@ splitLine tokenize_line(char *line_in, int instruction_address) {
   }
   int num_operands = i;
   splitLine out = {opcode, operands, num_operands, instruction_address};
+  free(line);
   return out;
 }
 
@@ -203,10 +237,30 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
         strcpy(operands[i], data->operands[i]);
     }
     // Check if any of the operands are a label
-    for( int i = 0; i < data->num_operands; i++ ) {
-        char *cur_operand = malloc(MAX_OPERAND_LENGTH * sizeof(char));
-        strcpy(cur_operand, (operands)[i]);
+    if (strcmp(data->opcode,"ldr") != 0 && strcmp(data->opcode,"str") != 0) {
+        for( int i = 0; i < data->num_operands; i++ ) {
+            char *cur_operand = malloc(MAX_OPERAND_LENGTH * sizeof(char));
+            strcpy(cur_operand, (operands)[i]);
 
+<<<<<<< src/tokenizer.c
+            if( EQUAL_STRS((operands)[i], "xzr") || EQUAL_STRS((operands)[i], "wzr")) {
+                // Zero register case
+                operands_as_ints[i] = ZR;
+            } else if (cur_operand[0] == 'x' || cur_operand[0] == 'w' || cur_operand[0] == '#') {
+                // Convert it to an integer
+                // Remove first character
+                char *endptr;
+                if (cur_operand[2] == 'x') { operands_as_ints[i] = strtoull(cur_operand + 1, &endptr, 0); }
+                else { operands_as_ints[i] = strtoull(cur_operand + 1, &endptr, 10); }
+            } else if( isLabel(cur_operand)) {
+                // Get the address of the label
+                operands_as_ints[i] = find(symbol_table, cur_operand) - data->instruction_address;
+            } else if (!strcmp(data->opcode, ".int")) {
+                char *endptr;
+                operands_as_ints[i] = strtoull(cur_operand, &endptr, 10);
+            }
+            free(cur_operand);
+=======
         if( EQUAL_STRS((operands)[i], "xzr") || EQUAL_STRS((operands)[i], "wzr")) {
             // Zero register case
             operands_as_ints[i] = ZR;
@@ -222,9 +276,9 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
         } else if (!strcmp(data->opcode, ".int")) {
             char *endptr;
             operands_as_ints[i] = strtoull(cur_operand, &endptr, 10);
+>>>>>>> src/tokenizer.c
         }
-        free(cur_operand);
-    }
+    }    
 
   // check first character to see whether its 32 or 64 bit
   bool sf;
@@ -369,11 +423,11 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
   } else if (EQUAL_STRS(data->opcode, "ldr")) {
       char *rtTemp = &data->operands[0][1];
       uint8_t rt = (uint8_t) atoi(rtTemp);
-      inst = SDTbuilder("ldr", rt, data->operands[1], sf);
+      inst = SDTbuilder("ldr", rt, data->operands[1], sf, symbol_table);
   } else if (EQUAL_STRS(data->opcode, "str")) {
       char *rtTemp = &data->operands[0][1];
       uint8_t rt = (uint8_t) atoi(rtTemp);
-      inst = SDTbuilder("str", rt, data->operands[1], sf);
+      inst = SDTbuilder("str", rt, data->operands[1], sf, symbol_table);
   } else if (EQUAL_STRS(data->opcode, ".int")) {
       inst.itype = directive;
       inst.instruction.directive = operands_as_ints[0];
