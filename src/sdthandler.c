@@ -315,10 +315,11 @@ instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf, symbol
     uint64_t value; uint64_t *valueAddr = NULL;
     if (sndInput != NULL) {
         value = find(table, sndInputCheck) - instruction_address;
+        if (!strncmp(sndInputCheck," #", 2)) {
+            char* endptr;
+            value = strtoull(sndInputCheck+2, &endptr, 0);
+        }
         valueAddr = &value;
-        //char str[100];
-        //sprintf(str, "%llu", value);
-
     }
     if (address[0] != '[') {
         return loadLiteralBuilder(rt, address, sf, valueAddr);
