@@ -220,6 +220,7 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
     // Convert the operands to integers
     uint64_t operands_as_ints[MAX_OPERANDS];
     char operands[MAX_OPERANDS][MAX_OPERAND_LENGTH];
+    int op1_length = strlen(data->operands[1]);
     for (int i = 0; i < data->num_operands; i++) {
         strcpy(operands[i], data->operands[i]);
     }
@@ -382,10 +383,12 @@ instruction line_to_instruction(splitLine *data, symbolt symbol_table) {
       inst.instruction.bcond.offset = operands_as_ints[0];
       inst.instruction.bcond.cond   = AL;
   } else if (EQUAL_STRS(data->opcode, "ldr")) {
+      data->operands[1][op1_length] = '\0';
       char *rtTemp = &data->operands[0][1];
       uint8_t rt = (uint8_t) atoi(rtTemp);
       inst = SDTbuilder("ldr", rt, data->operands[1], sf, symbol_table);
   } else if (EQUAL_STRS(data->opcode, "str")) {
+      data->operands[1][op1_length] = '\0';
       char *rtTemp = &data->operands[0][1];
       uint8_t rt = (uint8_t) atoi(rtTemp);
       inst = SDTbuilder("str", rt, data->operands[1], sf, symbol_table);

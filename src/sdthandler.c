@@ -272,7 +272,7 @@ static instruction registerOffsetBuilder(char *type, uint8_t rt, char *address, 
     regoffset.Xn = xn;
 
     int commaIndex = 0;
-    while (address[commaIndex] != '#') {
+    while (address[commaIndex] != ',') {
         commaIndex++;
     }
     uint64_t xm;
@@ -351,10 +351,10 @@ instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf, symbol
         return preIndexBuilder(type, rt, address, sf, valueAddr);
     } else if (address[len - 1] == ']' && strchr(address, hash) != NULL) {
         return unsignedOffsetBuilder(type, rt, address, sf, valueAddr);
-    } else if (address[strlen(address) - 1] == ']') {
-        return registerOffsetBuilder(type, rt, address, sf);
-    } else if (address[len - 1] == ']' && len < 6) {
+    } else if (address[strlen(address) - 1] == ']' && len < 6) {
         return zeroOffsetBuilder(type, rt, address, sf);
+    } else if (address[len - 1] == ']') {
+        return registerOffsetBuilder(type, rt, address, sf);
     } else {
         return postIndexBuilder(type, rt, address, sf, valueAddr);
     }
