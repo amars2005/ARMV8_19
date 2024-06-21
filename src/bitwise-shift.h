@@ -22,4 +22,9 @@ uint64_t asr64(uint64_t rn, int shift_amount);
 uint64_t ror64(uint64_t rn, int shift_amount);
 uint64_t bitwiseShift(uint64_t rn, int mode, shiftType instruction, int shift_amount);
 
+#define LITTLE(i)  ((i & 0xFF) << 24) | \
+                   ((i & 0xFF00) << 8) | \
+                   ((i >> 8) & 0xFF00) | \
+                   (i >> 24);
+
 #endif

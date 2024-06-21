@@ -2,6 +2,10 @@
 #define TOKENIZER_H
 
 #include <stdbool.h>
+//#include "symbol_table.h"
+//#include "instruction-types.h"
+#include "sdthandler.h"
+#include "bitwise-shift.h"
 #include "symbol_table.h"
 #include "instruction-types.h"
 
@@ -25,6 +29,11 @@ typedef struct {
     int instruction_address;
 } splitLine;
 
+typedef struct {
+    shiftType stype;
+    int amount;
+} shift;
+
 /*
 tokenise_line takes a well-formed non-empty string and splits it into a splitLine data structure
 */
@@ -35,5 +44,8 @@ line_to_instruction takes a splitLine structure and returns the corresponding in
 (the opcode determines the precise type of instruction and the operands are the same)
 */
 extern instruction line_to_instruction(splitLine *data, symbolt symbol_table);
+
+extern bool isLabel(char* line);
+extern bool isLabelColon(char* line);
 
 #endif
