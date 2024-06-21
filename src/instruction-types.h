@@ -16,13 +16,14 @@
 #define LE 13 // 1101
 #define AL 14 // 1110
 
-typedef enum { arithmeticDPIt, wideMoveDPIt, arithmeticDPRt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdtUOffset, sdtIndex, sdtRegOffset, ll, directive } instruction_t;
+typedef enum { arithmeticDPIt, wideMoveDPIt, arithmeticDPRt, logicDPRt, multiplyDPRt, brancht, bregt, bcondt, sdtUOffset, sdtIndex, sdtRegOffset, ll, directive, label } instruction_t;
 typedef enum { add, adds, sub, subs } arithmeticDPI_t;
 typedef enum { and, orr, eor, ands} logicDPR_t;
 typedef enum { bic, orn, eon, bics} logicDPRN_t;
 
 typedef struct {
     bool      sf;
+    bool      sh;
     uint64_t* Rd;
     uint64_t* Rn;
     uint64_t  Op2;
@@ -43,6 +44,7 @@ typedef struct {
     uint64_t* Rn;
     uint64_t* Rm;
     uint64_t Shift;
+    uint64_t Operand;
     uint64_t Op2;
     uint64_t  opc;
 } arithmeticDPR;

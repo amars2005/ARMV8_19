@@ -8,12 +8,12 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "symbol_table.h"
+//#include "symbol_table.h"
 #include "branchingInstr.h"
 #include "tokenizer.h"
-#include "instruction-types.h"
+//#include "instruction-types.h"
 #include "DPI-assembler.h"
-#include "sdthandler.h"
+//#include "sdthandler.h"
 
 // This is the size of buffer for loading in chars from input file
 // We will double the size if a line is greater than 64 chars
@@ -125,7 +125,7 @@ char **readFile(FILE *file) {
 
   if (index_lines > line_buffer_size - 2) {
     line_buffer_size *= 2;
-    lines = realloc(lines, line_buffer_size);
+    lines = realloc(lines, line_buffer_size * sizeof(char *));
     if (lines == NULL) {
       fclose(file);
       return NULL;
@@ -145,19 +145,20 @@ char **readFile(FILE *file) {
   return lines;
 }
 
-void secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
-    for (int j = 0; lines[j] != NULL; j ++) {
-        splitLine l_splitLine = tokenize_line(lines[j], j*4);
+int secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
+    int j = 0;
+    for (int k = 0; lines[k] != NULL; k ++) {
+        splitLine l_splitLine = tokenize_line(lines[k], j);
         instruction i = line_to_instruction(&l_splitLine, symbol_table);
         switch (i.itype) {
             case arithmeticDPIt:
-                instrs[j] = assembleArithmeticDPI(i.instruction.arithmeticDpi.opc, *i.instruction.arithmeticDpi.Rd, *i.instruction.arithmeticDpi.Rn, i.instruction.arithmeticDpi.Op2, i.instruction.arithmeticDpi.sf);
+                instrs[j] = assembleArithmeticDPI(i.instruction.arithmeticDpi.opc, *i.instruction.arithmeticDpi.Rd, *i.instruction.arithmeticDpi.Rn, i.instruction.arithmeticDpi.Op2, i.instruction.arithmeticDpi.sh, i.instruction.arithmeticDpi.sf);
                 break;
             case wideMoveDPIt:
-                instrs[j] = assembleWideMoveDPI(i.instruction.wideMoveDpi.opc, *i.instruction.wideMoveDpi.Rd, i.instruction.wideMoveDpi.Op, i.instruction.arithmeticDpi.sf);
+                instrs[j] = assembleWideMoveDPI(i.instruction.wideMoveDpi.opc, *i.instruction.wideMoveDpi.Rd, i.instruction.wideMoveDpi.Op, i.instruction.wideMoveDpi.hw, i.instruction.arithmeticDpi.sf);
                 break;
             case arithmeticDPRt:
-                instrs[j] = assembleArithmeticDPR(i.instruction.arithmeticDpr.opc, *i.instruction.arithmeticDpr.Rd, *i.instruction.arithmeticDpr.Rn, *i.instruction.arithmeticDpr.Rm, i.instruction.arithmeticDpr.Shift, i.instruction.arithmeticDpi.sf);
+                instrs[j] = assembleArithmeticDPR(i.instruction.arithmeticDpr.opc, *i.instruction.arithmeticDpr.Rd, *i.instruction.arithmeticDpr.Rn, *i.instruction.arithmeticDpr.Rm, i.instruction.arithmeticDpr.Shift, i.instruction.arithmeticDpr.Operand, i.instruction.arithmeticDpi.sf);
                 break;
             case logicDPRt:
                 instrs[j] = assembleLogicDPR(i.instruction.logicDpr.opc, *i.instruction.logicDpr.Rd, *i.instruction.logicDpr.Rn, *i.instruction.logicDpr.Rm, i.instruction.logicDpr.Shift, i.instruction.logicDpr.Operand, i.instruction.logicDpr.N, i.instruction.logicDpr.sf);
@@ -189,8 +190,12 @@ void secondPass(char** lines, uint32_t* instrs, symbolt symbol_table) {
             case directive:
                 instrs[j] = i.instruction.directive;
                 break;
+            case label:
+                continue;
         }
+        j++;
     }
+    return j;
 }
 
 // Converts each instruction to a uint32_t instruction stored in little Endian
@@ -244,27 +249,38 @@ int main(int argc, char **argv) {
   }
 
   // remove empty lines
-  for(int i = 0; code_lines[i] != NULL; i++) {
-      if (strcmp(code_lines[i], "") == 0) {
-          code_lines[i] = NULL;
-      }
+  char* code_lines2[1000];
+  int code_lines2Size = 0;
+
+  for (int i = 0; code_lines[i] != NULL; i++) {
+    if (strcmp(code_lines[i], "")) {
+      //code_lines[i] = NULL;
+
+      code_lines2[code_lines2Size] = code_lines[i];
+      code_lines2Size++;
+
+      // for (int j = (i+1); code_lines[j] != NULL; j++) {
+      //   char* temp = code_lines[j];
+      //   code_lines[j-1] = temp;
+      // }
+    }
   }
 
   // calculate the number of lines of code
     int size = -1;
-    while(code_lines[++size] != NULL) {}
+    while(code_lines2[++size] != NULL) {}
 
     // mallocs the symbol table
     symbolt symbol_table = NEW_SYM_TABLE;
     symbol_table->next = NULL;
 
     // goes through every instruction and records the address of every label into the symbol table
-    firstPass(symbol_table, code_lines);
+    firstPass(symbol_table, code_lines2);
 
     // processes every instruction line and saves them in binary form inside an array of 32 bit ints
     uint32_t instructions[size];
-    secondPass(code_lines, instructions, symbol_table);
-
+    size = secondPass(code_lines2, instructions, symbol_table);
+    
     // convert all instructions to little endian
     for (int i = 0; i < size; i++) {
         instructions[i] = convertToLittleEndian(instructions[i]);

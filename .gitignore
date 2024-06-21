@@ -42,6 +42,7 @@ build
 cmake-build-debug
 .idea
 *.txt
+*.img
 
 armv8_testsuite/
 symbol_table

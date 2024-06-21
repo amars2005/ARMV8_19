@@ -10,6 +10,7 @@ LOADLIBES = -lm
 
 all: assemble emulate
 
+assemble: assemble.c tokenizer.c bitwise-shift.c sdthandler.c DPI-assembler.c branchingInstr.c symbol_table.c sdthandler.h
 assemble: assemble.c tokenizer.c bitwise-shift.c sdthandler.c symbol_table.c DPI-assembler.c branchingInstr.c
 	gcc $(LOADLIBES) $(CFLAGS) assemble.c symbol_table.c bitwise-shift.c tokenizer.c DPI-assembler.c branchingInstr.c sdthandler.c -o assemble
 emulate: emulate.o
