@@ -45,9 +45,11 @@ void firstPass(symbolt t, char** lines) {
             continue;
         }
 
-        char label[strlen(*line)];
+        char label[strlen(*line) + 1];
         strcpy(label, *line);
-        label[strlen(label)-1] = '\0';
+        int i = strlen(label);
+        while (label[i] != ':') { i--; }
+        label[i] = '\0';
         int addr = (instr_num + 1) * 4;
 
         addToTable(t, label, addr);

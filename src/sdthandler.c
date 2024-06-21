@@ -311,6 +311,10 @@ char *splitAlnum(char *address) {
         if (pos == NULL) {
             return NULL;
         } else {
+            if (*(pos + 2) == '#') { return NULL; }
+            else if ((*(pos + 2) == 'x' || *(pos + 2) == 'w') && isdigit(*(pos + 3)) != 0) {
+                return NULL;
+            } 
             return pos + 2;
         }
     } else if (address[0] == '#') {
@@ -325,19 +329,21 @@ instruction SDTbuilder(char *type, uint8_t rt, char *address, uint8_t sf, symbol
     char hash = '#';
     int len = strlen(address);
     char *sndInput = splitAlnum(address);
-    char sndInputCheck[100]; strcpy(sndInputCheck, sndInput);
-    int inpLen = strlen(sndInput); int x = inpLen - 1;
-    while (isalnum(sndInputCheck[x]) == false) {
-        sndInputCheck[x] = '\0'; x--;
+    char sndInputCheck[100];
+    if (sndInput != NULL) {
+        strcpy(sndInputCheck, sndInput);
+        int inpLen = strlen(sndInput); int x = inpLen - 1;
+        while (isalnum(sndInputCheck[x]) == false) {
+            sndInputCheck[x] = '\0'; x--;
+        }
     }
     uint64_t value; uint64_t *valueAddr = NULL;
-    if (sndInputCheck != NULL) {
-        if (!((sndInputCheck[0] == 'w' || sndInputCheck[0] == 'x') && isdigit(sndInputCheck[1]) == true)) {
-            value = find(table, sndInputCheck);
-            valueAddr = &value;
-            //char str[100];
-            //sprintf(str, "%llu", value);
-        }
+    if (sndInput != NULL) {
+        value = find(table, sndInputCheck);
+        valueAddr = &value;
+        //char str[100];
+        //sprintf(str, "%llu", value);
+
     }
     if (address[0] != '[') {
         return loadLiteralBuilder(rt, address, sf, valueAddr);
