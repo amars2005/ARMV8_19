@@ -125,7 +125,7 @@ char **readFile(FILE *file) {
 
   if (index_lines > line_buffer_size - 2) {
     line_buffer_size *= 2;
-    lines = realloc(lines, line_buffer_size);
+    lines = realloc(lines, line_buffer_size * sizeof(char *));
     if (lines == NULL) {
       fclose(file);
       return NULL;
