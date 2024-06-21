@@ -234,43 +234,6 @@ static instruction unsignedOffsetBuilder(char *type, uint8_t rt, char *address, 
     return inst;
 }
 
-static instruction zeroOffsetBuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
-    instruction inst;
-    inst.itype = sdtUOffset;
-    instrData data;
-    SDTuOffset uoffset;
-
-    uint64_t xn;
-    if (address[3] == ']') {
-        char n[1] = {address[2]};
-        xn = atoi(n);
-    } else {
-        char n[2] = {address[2], address[3]};
-        xn = atoi(n);
-    }
-    uoffset.Xn = xn;
-    uoffset.imm12 = 0;
-
-    if (strcmp(type, "ldr") == 0) {
-        uoffset.l = 1;
-    } else {
-        uoffset.l = 0;
-    }
-
-    if (sf == 0) {
-        uoffset.sf = false;
-    } else {
-        uoffset.sf = true;
-    }
-
-    uoffset.u = true;
-    uoffset.Rt = (uint64_t) rt;
-    data.sdtuoffset = uoffset;
-    inst.instruction = data;
-
-    return inst;
-}
-
 static instruction registerOffsetBuilder(char *type, uint8_t rt, char *address, uint8_t sf) {
     instruction inst;
     inst.itype = sdtRegOffset;
